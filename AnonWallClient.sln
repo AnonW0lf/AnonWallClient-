@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnonWallClient", "AnonWallClient.csproj", "{6017C751-3294-4A30-B5D5-1BA1F22852E9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Arm|Any CPU = Arm|Any CPU
+		Arm|ARM32 = Arm|ARM32
+		Arm|ARM64 = Arm|ARM64
+		Debug|Any CPU = Debug|Any CPU
+		Debug|ARM32 = Debug|ARM32
+		Debug|ARM64 = Debug|ARM64
+		Release|Any CPU = Release|Any CPU
+		Release|ARM32 = Release|ARM32
+		Release|ARM64 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|Any CPU.ActiveCfg = Arm|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|Any CPU.Build.0 = Arm|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|Any CPU.Deploy.0 = Arm|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM32.ActiveCfg = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM32.Build.0 = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM32.Deploy.0 = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM64.ActiveCfg = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM64.Build.0 = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Arm|ARM64.Deploy.0 = Arm|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM32.ActiveCfg = Debug|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM32.Build.0 = Debug|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM32.Deploy.0 = Debug|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM64.Build.0 = Debug|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM32.ActiveCfg = Release|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM32.Build.0 = Release|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM32.Deploy.0 = Release|ARM32
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM64.ActiveCfg = Release|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM64.Build.0 = Release|ARM64
+		{6017C751-3294-4A30-B5D5-1BA1F22852E9}.Release|ARM64.Deploy.0 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1AB5AA68-9E65-4F09-A247-839CE4CACE73}
+	EndGlobalSection
+EndGlobal
