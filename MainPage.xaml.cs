@@ -9,36 +9,15 @@ public partial class MainPage : ContentPage
 {
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
-    private readonly IServiceProvider _serviceProvider;
-    private bool _isPollingStarted = false;
 
-    public MainPage(AppLogService logger, PollingService pollingService, IServiceProvider serviceProvider)
+    public MainPage(AppLogService logger, PollingService pollingService)
     {
         InitializeComponent();
         _logger = logger;
         _pollingService = pollingService;
-        _serviceProvider = serviceProvider;
         LoadSettings();
 
         _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
-    }
-
-    protected override void OnAppearing()
-    {
-        base.OnAppearing();
-
-        if (!_isPollingStarted)
-        {
-            _isPollingStarted = true;
-
-#if ANDROID
-            var serviceManager = _serviceProvider.GetService<IForegroundServiceManager>();
-            serviceManager?.StartService();
-#endif
-
-            // This starts the background task, but it will be idle
-            Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
-        }
     }
 
     private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -68,7 +47,7 @@ public partial class MainPage : ContentPage
             StatusLabel.Text = "Settings saved! Polling enabled.";
             _logger.Add($"Link ID set to: {LinkIdEntry.Text}.");
 
-            // We explicitly tell the service it's okay to start polling now
+            // This is now the ONLY place where polling is activated.
             _pollingService.EnablePolling();
         }
         else

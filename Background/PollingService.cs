@@ -8,7 +8,7 @@ public class PollingService
     private readonly IWallpaperService _wallpaperService;
     private readonly AppLogService _logger;
     private string _linkId = "";
-    private bool _isPollingEnabled = false; // Add this flag, default to false
+    private bool _isPollingEnabled = false; // The service is disabled by default
 
     public PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger)
     {
@@ -17,20 +17,20 @@ public class PollingService
         _logger = logger;
     }
 
-    // Add this public method to allow the UI to start the polling
+    // This method allows the UI to activate the polling loop
     public void EnablePolling()
     {
         _isPollingEnabled = true;
-        _logger.Add("Polling has been enabled.");
+        _logger.Add("Polling has been enabled by user.");
     }
 
     public async Task StartPollingAsync(CancellationToken stoppingToken)
     {
-        _logger.Add("Service started and is idle.");
+        _logger.Add("Service thread started and is idle.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            // THE FIX: The service will now only check for wallpapers if it has been enabled
+            // Only do work if the polling has been enabled
             if (_isPollingEnabled)
             {
                 _linkId = Preferences.Get("link_id", string.Empty);
@@ -55,7 +55,6 @@ public class PollingService
                 }
             }
 
-            // The loop still waits, but may not do any work
             await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
         }
     }
