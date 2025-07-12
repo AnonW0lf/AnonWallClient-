@@ -3,15 +3,15 @@ using AnonWallClient.Background;
 using AnonWallClient.Services;
 
 #if ANDROID
-using AnonWallClient.Platforms.Android;
-#elif WINDOWS
-using AnonWallClient.Platforms.Windows;
+using AnonWallClient.Platforms.Android.Services;
 #endif
 
 namespace AnonWallClient;
 
 public static class MauiProgram
 {
+    public static IServiceProvider? Services { get; private set; }
+
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -23,40 +23,27 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // Register services for dependency injection
         builder.Services.AddHttpClient("WalltakerClient");
+
         builder.Services.AddSingleton<AppLogService>();
         builder.Services.AddSingleton<WalltakerService>();
-
-        // Register platform-specific wallpaper services
-#if ANDROID
-        builder.Services.AddSingleton<IWallpaperService>(provider =>
-            new AnonWallClient.Platforms.Android.WallpaperService(
-                new HttpClient(),
-                provider.GetRequiredService<AppLogService>()
-            )
-        );
-        builder.Services.AddSingleton<IForegroundServiceManager, AnonWallClient.Platforms.Android.Services.ForegroundServiceManager>();
-#elif WINDOWS
-        builder.Services.AddSingleton<IWallpaperService>(provider =>
-            new AnonWallClient.Platforms.Windows.WallpaperService(
-                new HttpClient(),
-                provider.GetRequiredService<AppLogService>()
-            )
-        );
-#endif
-
-        // Register the simplified PollingService (with no dependencies for now)
         builder.Services.AddSingleton<PollingService>();
 
-        // Register the MainPage so it can be injected into App.xaml.cs
-        builder.Services.AddSingleton<MainPage>();
+#if ANDROID
+        builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
+        builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Android.WallpaperService>();
+#elif WINDOWS
+        builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Windows.WallpaperService>();
+#endif
 
+        builder.Services.AddSingleton<MainPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
-        return builder.Build();
+        var app = builder.Build();
+        Services = app.Services;
+        return app;
     }
 }

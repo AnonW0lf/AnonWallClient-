@@ -7,7 +7,10 @@
         <VerticalStackLayout Grid.Row="0" Padding="30,10" Spacing="15">
             <Label Text="Walltaker Client" FontSize="32" FontAttributes="Bold" HorizontalOptions="Center" />
             <Entry x:Name="LinkIdEntry" Placeholder="Enter your Link ID" />
-            <Button Text="Save and Start" Clicked="OnSaveClicked" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="Save and Start" Clicked="OnSaveClicked" />
+                <Button Grid.Column="1" Text="Copy Log" Clicked="OnCopyLogClicked"/>
+            </Grid>
             <Label x:Name="StatusLabel" Text="Enter your Link ID and click Save." />
         </VerticalStackLayout>
 

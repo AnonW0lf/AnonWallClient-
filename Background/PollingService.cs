@@ -2,22 +2,14 @@
 
 namespace AnonWallClient.Background;
 
-public class PollingService
+public class PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger)
 {
-    private readonly WalltakerService _walltakerService;
-    private readonly IWallpaperService _wallpaperService;
-    private readonly AppLogService _logger;
+    private readonly WalltakerService _walltakerService = walltakerService;
+    private readonly IWallpaperService _wallpaperService = wallpaperService;
+    private readonly AppLogService _logger = logger;
     private string _linkId = "";
-    private bool _isPollingEnabled = false; // The service is disabled by default
+    private bool _isPollingEnabled = false;
 
-    public PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger)
-    {
-        _walltakerService = walltakerService;
-        _wallpaperService = wallpaperService;
-        _logger = logger;
-    }
-
-    // This method allows the UI to activate the polling loop
     public void EnablePolling()
     {
         _isPollingEnabled = true;
@@ -30,7 +22,6 @@ public class PollingService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            // Only do work if the polling has been enabled
             if (_isPollingEnabled)
             {
                 _linkId = Preferences.Get("link_id", string.Empty);
