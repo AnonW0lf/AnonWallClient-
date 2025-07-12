@@ -1,5 +1,4 @@
-﻿using AnonWallClient.Background;
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
 using Microsoft.Maui;
 
 namespace AnonWallClient;

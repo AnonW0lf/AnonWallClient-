@@ -10,7 +10,7 @@ public partial class MainPage : ContentPage
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
     private readonly IServiceProvider _serviceProvider;
-    private bool _isPollingStarted = false;
+    private bool _isServiceStarted = false;
 
     public MainPage(AppLogService logger, PollingService pollingService, IServiceProvider serviceProvider)
     {
@@ -23,49 +23,42 @@ public partial class MainPage : ContentPage
         _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
 
-        if (!_isPollingStarted)
+        if (!_isServiceStarted)
         {
+            _isServiceStarted = true;
+
+            // Add a small delay to ensure the UI thread is fully initialized before proceeding.
+            await Task.Delay(250);
+
 #if ANDROID
-            _ = Task.Run(async () => await StartAndroidServices());
-#else
-            _isPollingStarted = true;
+            // Request notification permission directly on the UI thread
+            var status = await Permissions.CheckStatusAsync<Permissions.PostNotifications>();
+            if (status != PermissionStatus.Granted)
+            {
+                _logger.Add("Requesting notification permission...");
+                status = await Permissions.RequestAsync<Permissions.PostNotifications>();
+            }
+
+            if (status == PermissionStatus.Granted)
+            {
+                _logger.Add("Notification permission granted. Starting foreground service.");
+                var serviceManager = _serviceProvider.GetService<IForegroundServiceManager>();
+                serviceManager?.StartService();
+            }
+            else
+            {
+                _logger.Add("Notification permission denied. Background service may not be reliable.");
+            }
+#endif
+
+            // Start the C# polling task *after* handling platform-specific services
             _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
-#endif
         }
     }
-
-#if ANDROID
-    private async Task StartAndroidServices()
-    {
-        var status = await Permissions.CheckStatusAsync<Permissions.PostNotifications>();
-        _logger.Add($"Initial notification permission status: {status}");
-
-        if (status != PermissionStatus.Granted)
-        {
-            _logger.Add("Requesting notification permission...");
-            status = await Permissions.RequestAsync<Permissions.PostNotifications>();
-            _logger.Add($"Result of permission request: {status}");
-        }
-
-        if (status == PermissionStatus.Granted)
-        {
-            _logger.Add("Notification permission granted.");
-            var serviceManager = _serviceProvider.GetService<IForegroundServiceManager>();
-            serviceManager?.StartService();
-        }
-        else
-        {
-            _logger.Add("Notification permission was not granted. Background service may not be reliable.");
-        }
-        
-        _isPollingStarted = true;
-        _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
-    }
-#endif
 
     private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

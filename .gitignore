@@ -416,3 +416,5 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+#Additional Files to Ignore
+/NOTES.txt
