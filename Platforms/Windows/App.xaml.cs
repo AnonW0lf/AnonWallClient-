@@ -1,4 +1,4 @@
-using AnonWallClient.Services;
+﻿using AnonWallClient.Services;
 using H.NotifyIcon;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI;
@@ -12,7 +12,9 @@ public partial class App : MauiWinUIApplication
 {
     public App()
     {
-        InitializeComponent();
+        // The real InitializeComponent() is auto-generated, so we don't need a manual one.
+        // This call will now work correctly.
+        this.InitializeComponent();
     }
 
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
@@ -27,26 +29,25 @@ public partial class App : MauiWinUIApplication
         var trayIcon = new TaskbarIcon
         {
             ToolTipText = "AnonWallClient",
+            // Use the simpler 'Icon' property with a direct path to your .ico file
             Icon = "Images/appicon.ico"
         };
 
-        var flyout = new MenuFlyout();
+        // Use the library's command system with fully qualified names to avoid ambiguity
+        trayIcon.LeftClickCommand = new Microsoft.Maui.Controls.Command(ShowWindow);
 
-        var openItem = new MenuFlyoutItem { Text = "Open" };
-        openItem.Click += (s, e) => ShowWindow();
-        flyout.Items.Add(openItem);
+        // The correct property is ContextMenu, and it expects a native WinUI MenuFlyout
+        trayIcon.ContextMenu = new MenuFlyout
+        {
+            Items =
+            {
+                new MenuFlyoutItem { Text = "Open", Command = new Microsoft.Maui.Controls.Command(ShowWindow) },
+                new MenuFlyoutItem { Text = "Panic", Command = new Microsoft.Maui.Controls.Command(PanicAndExit) },
+                new MenuFlyoutSeparator(),
+                new MenuFlyoutItem { Text = "Exit", Command = new Microsoft.Maui.Controls.Command(ExitApplication) }
+            }
+        };
 
-        var panicItem = new MenuFlyoutItem { Text = "Panic" };
-        panicItem.Click += (s, e) => PanicAndExit();
-        flyout.Items.Add(panicItem);
-
-        flyout.Items.Add(new MenuFlyoutSeparator());
-
-        var exitItem = new MenuFlyoutItem { Text = "Exit" };
-        exitItem.Click += (s, e) => ExitApplication();
-        flyout.Items.Add(exitItem);
-
-        trayIcon.ContextFlyout = flyout;
         trayIcon.ForceCreate();
 
         var windowId = Win32Interop.GetWindowIdFromWindow(WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow));
@@ -59,8 +60,11 @@ public partial class App : MauiWinUIApplication
         };
     }
 
-    private void ShowWindow() => global::AnonWallClient.App.Current?.Windows.FirstOrDefault()?.Show();
-    private void ExitApplication() => global::AnonWallClient.App.Current?.Quit();
+    private void ShowWindow()
+    {
+        var mauiWindow = global::AnonWallClient.App.Current?.Windows.FirstOrDefault();
+        mauiWindow?.Show();
+    }
 
     private void PanicAndExit()
     {
@@ -73,5 +77,10 @@ public partial class App : MauiWinUIApplication
             _ = wallpaperService?.SetWallpaperAsync(panicPath);
         }
         ExitApplication();
+    }
+
+    private void ExitApplication()
+    {
+        global::AnonWallClient.App.Current?.Quit();
     }
 }

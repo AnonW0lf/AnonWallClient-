@@ -1,11 +1,20 @@
 ﻿using System.Runtime.InteropServices;
 using AnonWallClient.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AnonWallClient.Platforms.Windows;
 
-public partial class WallpaperService(HttpClient httpClient, AppLogService logger) : IWallpaperService
+public partial class WallpaperService : IWallpaperService
 {
-    // THE FIX IS HERE: We explicitly name the Windows function "SystemParametersInfoW"
+    private readonly HttpClient _httpClient;
+    private readonly AppLogService _logger;
+
+    public WallpaperService(IHttpClientFactory httpClientFactory, AppLogService logger)
+    {
+        _httpClient = httpClientFactory.CreateClient("WalltakerClient");
+        _logger = logger;
+    }
+
     [LibraryImport("user32.dll", EntryPoint = "SystemParametersInfoW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
 
@@ -13,40 +22,46 @@ public partial class WallpaperService(HttpClient httpClient, AppLogService logge
     private const int SPIF_UPDATEINIFILE = 0x01;
     private const int SPIF_SENDWININICHANGE = 0x02;
 
-    public async Task<bool> SetWallpaperAsync(string imageUrl)
+    public async Task<bool> SetWallpaperAsync(string imagePathOrUrl)
     {
-        logger.Add("Attempting to set Windows wallpaper...");
+        _logger.Add("Attempting to set Windows wallpaper...");
         try
         {
-            using var response = await httpClient.GetAsync(imageUrl);
-            if (!response.IsSuccessStatusCode)
+            string tempPath;
+            if (Uri.IsWellFormedUriString(imagePathOrUrl, UriKind.Absolute))
             {
-                logger.Add($"Failed to download image. Status: {response.StatusCode}");
-                return false;
+                using var response = await _httpClient.GetAsync(imagePathOrUrl);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.Add($"Failed to download image. Status: {response.StatusCode}");
+                    return false;
+                }
+
+                tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.jpg");
+                await using var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
+                await response.Content.CopyToAsync(fs);
+                await fs.DisposeAsync();
+            }
+            else
+            {
+                tempPath = imagePathOrUrl;
             }
 
-            var tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.jpg");
-            await using var fs = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
-            await response.Content.CopyToAsync(fs);
-
-            await fs.DisposeAsync();
-
             int result = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, tempPath, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
-
             if (result != 0)
             {
-                logger.Add("Wallpaper set successfully.");
+                _logger.Add("Wallpaper set successfully.");
                 return true;
             }
             else
             {
-                logger.Add("System call failed to set wallpaper.");
+                _logger.Add("System call failed to set wallpaper.");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            logger.Add($"ERROR setting Windows wallpaper: {ex.Message}");
+            _logger.Add($"ERROR setting Windows wallpaper: {ex.Message}");
             return false;
         }
     }
