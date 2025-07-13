@@ -418,3 +418,5 @@ FodyWeavers.xsd
 *.msp
 #Additional Files to Ignore
 /NOTES.txt
+
+.fake

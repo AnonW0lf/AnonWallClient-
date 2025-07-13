@@ -3,22 +3,35 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AnonWallClient.MainPage">
 
-    <Grid RowDefinitions="Auto, *">
-        <VerticalStackLayout Grid.Row="0" Padding="30,10" Spacing="15">
+    <ScrollView>
+        <VerticalStackLayout Padding="30,10" Spacing="15">
+
             <Label Text="Walltaker Client" FontSize="32" FontAttributes="Bold" HorizontalOptions="Center" />
+
             <Entry x:Name="LinkIdEntry" Placeholder="Enter your Link ID" />
+            <Entry x:Name="ApiKeyEntry" Placeholder="Enter your API Key (optional)" />
+
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button Grid.Column="0" Text="Save and Start" Clicked="OnSaveClicked" />
-                <Button Grid.Column="1" Text="Copy Log" Clicked="OnCopyLogClicked"/>
+                <Button Grid.Column="1" Text="Copy Log" Clicked="OnCopyLogClicked" />
             </Grid>
             <Label x:Name="StatusLabel" Text="Enter your Link ID and click Save." />
-        </VerticalStackLayout>
 
-        <Border Grid.Row="1" StrokeThickness="1" Stroke="LightGray" Padding="5" Margin="10">
-            <Editor x:Name="LogEditor"
-                    IsReadOnly="True"
-                    FontSize="12" />
-        </Border>
-    </Grid>
+            <Label Text="Respond to Wallpaper:" Margin="0,10,0,0" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="Horny" Clicked="OnHornyClicked" />
+                <Button Grid.Column="1" Text="Disgust" Clicked="OnDisgustClicked" />
+                <Button Grid.Column="2" Text="Came" Clicked="OnCameClicked" />
+            </Grid>
+
+            <Border Grid.Row="1" StrokeThickness="1" Stroke="LightGray" Padding="5" Margin="10">
+                <Editor x:Name="LogEditor"
+                        IsReadOnly="True"
+                        HeightRequest="200"
+                        FontSize="12" />
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>
