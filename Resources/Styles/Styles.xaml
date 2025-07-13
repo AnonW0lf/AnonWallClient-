@@ -45,7 +45,7 @@
     <Style TargetType="Shell" ApplyToDerivedTypes="True">
         <Setter Property="Shell.BackgroundColor" Value="{StaticResource TabBarBackgroundColor}" />
         <Setter Property="Shell.TitleColor" Value="{StaticResource PrimaryTextColor}" />
-        <Setter Property="Shell.ForegroundColor" Value="{Static_Resource PrimaryTextColor}" />
+        <Setter Property="Shell.ForegroundColor" Value="{StaticResource PrimaryTextColor}" />
         <Setter Property="Shell.UnselectedColor" Value="{StaticResource TertiaryTextColor}" />
         <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource PrimaryTextColor}" />
         <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TertiaryTextColor}" />

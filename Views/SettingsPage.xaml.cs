@@ -1,4 +1,7 @@
 using AnonWallClient.Services;
+using AnonWallClient.Background;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 namespace AnonWallClient.Views;
 
@@ -22,16 +25,19 @@ public partial class SettingsPage : ContentPage
         PanicFileLabel.Text = string.IsNullOrEmpty(savedPanicFile) ? "No local file selected." : savedPanicFile;
     }
 
-    private void OnSaveClicked(object sender, EventArgs e)
+    private async void OnSaveClicked(object sender, EventArgs e)
     {
         Preferences.Set("link_id", LinkIdEntry.Text);
         Preferences.Set("api_key", ApiKeyEntry.Text);
         Preferences.Set("panic_url", PanicUrlEntry.Text);
-        
+
         // The panic_file_path is saved in the OnSelectPanicFileClicked method
-        
+
         _pollingService.EnablePolling();
-        Toast.Make("Settings Saved! Polling is enabled.").Show();
+        //Toast.Make("Settings Saved! Polling is enabled.", ToastDuration.Short).Show();
+        await Toast.Make("Settings Saved! Polling is enabled.", ToastDuration.Short).Show();
+        // After saving, navigate to the Home page
+        await Shell.Current.GoToAsync("//HomePage");
     }
 
     private async void OnSelectPanicFileClicked(object sender, EventArgs e)

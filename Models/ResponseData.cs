@@ -5,8 +5,8 @@ namespace AnonWallClient.Models;
 public class ResponseData
 {
     [JsonPropertyName("api_key")]
-    public string ApiKey { get; set; }
+    public string ApiKey { get; set; } = string.Empty;
 
     [JsonPropertyName("type")]
-    public string ResponseType { get; set; }
+    public string ResponseType { get; set; } = string.Empty;
 }

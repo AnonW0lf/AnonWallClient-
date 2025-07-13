@@ -1,5 +1,8 @@
 using AnonWallClient.Services;
 using System.Collections.Specialized;
+using AnonWallClient.Background;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 namespace AnonWallClient.Views;
 
@@ -7,6 +10,7 @@ public partial class HomePage : ContentPage
 {
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
+    private bool _isServiceStarted = false;
 
     public HomePage(AppLogService logger, PollingService pollingService)
     {
@@ -14,7 +18,39 @@ public partial class HomePage : ContentPage
         _logger = logger;
         _pollingService = pollingService;
 
-        LogEditor.ItemsSource = _logger.Logs;
+        // Subscribe to log changes to update the Editor's Text property
+        _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
+
+        // Set the initial text
+        LogEditor.Text = string.Join(Environment.NewLine, _logger.Logs);
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (!_isServiceStarted)
+        {
+            _isServiceStarted = true;
+
+            // Automatically enable polling if a Link ID exists
+            var savedLinkId = Preferences.Get("link_id", string.Empty);
+            if (!string.IsNullOrEmpty(savedLinkId))
+            {
+                _pollingService.EnablePolling();
+            }
+
+            // Start the background task itself (it will be idle until enabled)
+            _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
+        }
+    }
+
+    private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            LogEditor.Text = string.Join(Environment.NewLine, _logger.Logs);
+        });
     }
 
     private async void OnHornyClicked(object sender, EventArgs e) => await SendResponse("horny");
@@ -34,17 +70,17 @@ public partial class HomePage : ContentPage
         }
 
         _logger.Add($"Sending '{responseType}' response...");
-        var result = await _pollingService.PostResponseAsync(linkId, apiKey, responseType);
+        var (isSuccess, errorMessage) = await _pollingService.PostResponseAsync(linkId, apiKey, responseType);
 
-        if (result.Success)
+        if (isSuccess)
         {
             _logger.Add("Response sent successfully!");
-            await Toast.Make("Response Sent!").Show();
+            await Toast.Make("Response Sent!", ToastDuration.Short).Show();
         }
         else
         {
-            _logger.Add($"Failed to send response: {result.ErrorMessage}");
-            await Toast.Make($"Failed: {result.ErrorMessage}", ToastDuration.Long).Show();
+            _logger.Add($"Failed to send response: {errorMessage}");
+            await Toast.Make($"Failed: {errorMessage}", ToastDuration.Long).Show();
         }
     }
 

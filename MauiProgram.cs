@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Maui;
+using H.NotifyIcon;
 using Microsoft.Extensions.Logging;
 using AnonWallClient.Background;
 using AnonWallClient.Services;
@@ -8,6 +9,7 @@ using AnonWallClient.Views;
 using AnonWallClient.Platforms.Android.Services;
 #endif
 #if WINDOWS
+// We reference the namespace, not a specific class
 using AnonWallClient.Platforms.Windows;
 #endif
 
@@ -23,6 +25,9 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+#if WINDOWS
+            .UseNotifyIcon()
+#endif
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -33,22 +38,22 @@ public static class MauiProgram
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("AnonWallClient/1.0");
         });
-        
+
         builder.Services.AddSingleton<AppLogService>();
         builder.Services.AddSingleton<WalltakerService>();
         builder.Services.AddSingleton<PollingService>();
-        
+
 #if ANDROID
         builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
         builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Android.WallpaperService>();
 #elif WINDOWS
+        // For Windows, WallpaperService is in the Platforms.Windows namespace
         builder.Services.AddSingleton<IWallpaperService, WallpaperService>();
 #endif
-        
-        // Register the new Shell and pages
+
         builder.Services.AddSingleton<AppShell>();
         builder.Services.AddSingleton<HomePage>();
-        builder.Services.addSingleton<SettingsPage>();
+        builder.Services.AddSingleton<SettingsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

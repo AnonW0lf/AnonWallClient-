@@ -10,7 +10,7 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
     public void EnablePolling()
     {
         _isPollingEnabled = true;
-        logger.Add("Polling has been enabled by user.");
+        logger.Add("Polling has been enabled.");
     }
 
     public async Task<(bool Success, string ErrorMessage)> PostResponseAsync(string linkId, string apiKey, string responseType)
