@@ -4,21 +4,23 @@ namespace AnonWallClient.Background;
 
 public class PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger)
 {
-    private readonly WalltakerService _walltakerService = walltakerService;
-    private readonly IWallpaperService _wallpaperService = wallpaperService;
-    private readonly AppLogService _logger = logger;
     private string _linkId = "";
     private bool _isPollingEnabled = false;
 
     public void EnablePolling()
     {
         _isPollingEnabled = true;
-        _logger.Add("Polling has been enabled by user.");
+        logger.Add("Polling has been enabled.");
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> PostResponseAsync(string linkId, string apiKey, string responseType)
+    {
+        return await walltakerService.PostResponseAsync(linkId, apiKey, responseType);
     }
 
     public async Task StartPollingAsync(CancellationToken stoppingToken)
     {
-        _logger.Add("Service thread started and is idle.");
+        logger.Add("Service thread started and is idle.");
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -28,20 +30,20 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
 
                 if (!string.IsNullOrWhiteSpace(_linkId))
                 {
-                    _logger.Add($"Checking for wallpaper with Link ID: {_linkId}");
-                    var newImageUrl = await _walltakerService.GetNewWallpaperUrlAsync(_linkId);
+                    logger.Add($"Checking for wallpaper with Link ID: {_linkId}");
+                    var newImageUrl = await walltakerService.GetNewWallpaperUrlAsync(_linkId);
 
                     if (newImageUrl != null)
                     {
-                        _logger.Add($"New wallpaper found: {newImageUrl}");
+                        logger.Add($"New wallpaper found: {newImageUrl}");
                         MainThread.BeginInvokeOnMainThread(async () =>
                         {
-                            await _wallpaperService.SetWallpaperAsync(newImageUrl);
+                            await wallpaperService.SetWallpaperAsync(newImageUrl);
                         });
                     }
                     else
                     {
-                        _logger.Add("No new wallpaper found.");
+                        logger.Add("No new wallpaper found.");
                     }
                 }
             }

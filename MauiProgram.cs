@@ -1,9 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using H.NotifyIcon;
+using Microsoft.Extensions.Logging;
 using AnonWallClient.Background;
 using AnonWallClient.Services;
+using AnonWallClient.Views;
 
 #if ANDROID
 using AnonWallClient.Platforms.Android.Services;
+#endif
+#if WINDOWS
+// We reference the namespace, not a specific class
+using AnonWallClient.Platforms.Windows;
 #endif
 
 namespace AnonWallClient;
@@ -17,13 +24,20 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
+            .UseMauiCommunityToolkit()
+#if WINDOWS
+            .UseNotifyIcon()
+#endif
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        builder.Services.AddHttpClient("WalltakerClient");
+        builder.Services.AddHttpClient("WalltakerClient", client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AnonWallClient/1.0");
+        });
 
         builder.Services.AddSingleton<AppLogService>();
         builder.Services.AddSingleton<WalltakerService>();
@@ -33,10 +47,13 @@ public static class MauiProgram
         builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
         builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Android.WallpaperService>();
 #elif WINDOWS
-        builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Windows.WallpaperService>();
+        // For Windows, WallpaperService is in the Platforms.Windows namespace
+        builder.Services.AddSingleton<IWallpaperService, WallpaperService>();
 #endif
 
-        builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddSingleton<AppShell>();
+        builder.Services.AddSingleton<HomePage>();
+        builder.Services.AddSingleton<SettingsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
