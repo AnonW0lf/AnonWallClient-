@@ -1,5 +1,4 @@
 ﻿using CommunityToolkit.Maui;
-using H.NotifyIcon;
 using Microsoft.Extensions.Logging;
 using AnonWallClient.Background;
 using AnonWallClient.Services;
@@ -10,6 +9,7 @@ using AnonWallClient.Platforms.Android.Services;
 #endif
 #if WINDOWS
 // We reference the namespace, not a specific class
+using H.NotifyIcon;
 using AnonWallClient.Platforms.Windows;
 #endif
 
