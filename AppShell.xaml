@@ -12,7 +12,8 @@
             <ShellContent ContentTemplate="{DataTemplate views:HomePage}" Route="HomePage" />
         </Tab>
         <Tab Title="Settings" Icon="settings.png">
-            <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+           <!-- <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" /> -->
+            <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="SettingsPage" />
         </Tab>
     </TabBar>
 

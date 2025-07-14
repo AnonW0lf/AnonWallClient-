@@ -1,4 +1,5 @@
-﻿namespace AnonWallClient;
+﻿using AnonWallClient.Views;
+namespace AnonWallClient;
 
 public partial class AppShell : Shell
 {

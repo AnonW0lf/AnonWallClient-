@@ -31,12 +31,10 @@ public partial class SettingsPage : ContentPage
         Preferences.Set("api_key", ApiKeyEntry.Text);
         Preferences.Set("panic_url", PanicUrlEntry.Text);
 
-        // The panic_file_path is saved in the OnSelectPanicFileClicked method
-
         _pollingService.EnablePolling();
-        //Toast.Make("Settings Saved! Polling is enabled.", ToastDuration.Short).Show();
-        await Toast.Make("Settings Saved! Polling is enabled.", ToastDuration.Short).Show();
-        // After saving, navigate to the Home page
+
+        await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Settings Saved! Polling is enabled.", ToastDuration.Short).Show());
+
         await Shell.Current.GoToAsync("//HomePage");
     }
 
@@ -64,7 +62,7 @@ public partial class SettingsPage : ContentPage
         }
         else
         {
-            await Toast.Make("Storage permission not granted.").Show();
+            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Storage permission not granted.").Show());
         }
     }
 }

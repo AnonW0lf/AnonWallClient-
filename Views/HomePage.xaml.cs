@@ -18,10 +18,7 @@ public partial class HomePage : ContentPage
         _logger = logger;
         _pollingService = pollingService;
 
-        // Subscribe to log changes to update the Editor's Text property
         _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
-
-        // Set the initial text
         LogEditor.Text = string.Join(Environment.NewLine, _logger.Logs);
     }
 
@@ -33,14 +30,12 @@ public partial class HomePage : ContentPage
         {
             _isServiceStarted = true;
 
-            // Automatically enable polling if a Link ID exists
             var savedLinkId = Preferences.Get("link_id", string.Empty);
             if (!string.IsNullOrEmpty(savedLinkId))
             {
                 _pollingService.EnablePolling();
             }
 
-            // Start the background task itself (it will be idle until enabled)
             _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
         }
     }
@@ -65,7 +60,7 @@ public partial class HomePage : ContentPage
         if (string.IsNullOrWhiteSpace(linkId) || string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.Add("ERROR: Link ID and API Key must be set to send a response.");
-            await Toast.Make("ERROR: Link ID and API Key must be set.", ToastDuration.Long).Show();
+            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("ERROR: Link ID and API Key must be set.", ToastDuration.Long).Show());
             return;
         }
 
@@ -75,12 +70,12 @@ public partial class HomePage : ContentPage
         if (isSuccess)
         {
             _logger.Add("Response sent successfully!");
-            await Toast.Make("Response Sent!", ToastDuration.Short).Show();
+            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Response Sent!", ToastDuration.Short).Show());
         }
         else
         {
             _logger.Add($"Failed to send response: {errorMessage}");
-            await Toast.Make($"Failed: {errorMessage}", ToastDuration.Long).Show();
+            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"Failed: {errorMessage}", ToastDuration.Long).Show());
         }
     }
 
