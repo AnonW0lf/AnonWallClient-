@@ -47,17 +47,10 @@
 
   <ItemGroup>
     <MauiImage Remove="Resources\Images\appicon.ico" />
-    <MauiImage Remove="Resources\Images\dotnet_bot.png" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
     <Content Include="Resources\Images\appicon.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Resources\Images\dotnet_bot.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
