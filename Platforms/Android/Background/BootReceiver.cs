@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.OS;
+using System.Diagnostics.CodeAnalysis;
 
 namespace AnonWallClient.Platforms.Android.Background;
 
@@ -8,6 +9,12 @@ namespace AnonWallClient.Platforms.Android.Background;
 [IntentFilter(new[] { Intent.ActionBootCompleted })]
 public class BootReceiver : BroadcastReceiver
 {
+    // The attribute is now on the constructor
+    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicConstructors, typeof(BootReceiver))]
+    public BootReceiver()
+    {
+    }
+
     public override void OnReceive(Context? context, Intent? intent)
     {
         if (context != null && intent?.Action == Intent.ActionBootCompleted)

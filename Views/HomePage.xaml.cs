@@ -10,7 +10,6 @@ public partial class HomePage : ContentPage
 {
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
-    private bool _isServiceStarted = false;
 
     public HomePage(AppLogService logger, PollingService pollingService)
     {
@@ -25,19 +24,7 @@ public partial class HomePage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-
-        if (!_isServiceStarted)
-        {
-            _isServiceStarted = true;
-
-            var savedLinkId = Preferences.Get("link_id", string.Empty);
-            if (!string.IsNullOrEmpty(savedLinkId))
-            {
-                _pollingService.EnablePolling();
-            }
-
-            _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
-        }
+        // This logic is now handled in the AndroidForegroundService and AppShell
     }
 
     private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -83,5 +70,34 @@ public partial class HomePage : ContentPage
     {
         await Clipboard.SetTextAsync(LogEditor.Text);
         _logger.Add("Log copied to clipboard.");
+    }
+
+    // --- ADDING THESE TWO MISSING METHODS ---
+    private void OnPanicClicked(object sender, EventArgs e)
+    {
+        _logger.Add("UI Panic button clicked.");
+        var panicPath = Preferences.Get("panic_file_path", string.Empty);
+        if (string.IsNullOrEmpty(panicPath))
+        {
+            panicPath = Preferences.Get("panic_url", string.Empty);
+        }
+
+        if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
+        {
+            var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
+            _ = wallpaperService?.SetWallpaperAsync(panicPath);
+        }
+
+        OnExitClicked(sender, e);
+    }
+
+    private void OnExitClicked(object sender, EventArgs e)
+    {
+        _logger.Add("UI Exit button clicked.");
+#if ANDROID
+        var serviceManager = this.Handler!.MauiContext!.Services.GetService<IForegroundServiceManager>();
+        serviceManager?.StopService();
+#endif
+        Application.Current?.Quit();
     }
 }

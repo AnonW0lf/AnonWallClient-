@@ -2,17 +2,32 @@ using AnonWallClient.Services;
 using AnonWallClient.Background;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using System.Collections.Generic;
 
 namespace AnonWallClient.Views;
+
+// --- Custom Permission Definition ---
+#if ANDROID
+public class ReadMediaImagesPermission : Permissions.BasePlatformPermission
+{
+    public override (string androidPermission, bool isRuntime)[] RequiredPermissions =>
+        new List<(string androidPermission, bool isRuntime)>
+        {
+            (global::Android.Manifest.Permission.ReadMediaImages, true)
+        }.ToArray();
+}
+#endif
 
 public partial class SettingsPage : ContentPage
 {
     private readonly PollingService _pollingService;
+    private readonly AppLogService _logger;
 
-    public SettingsPage(PollingService pollingService)
+    public SettingsPage(PollingService pollingService, AppLogService logger)
     {
         InitializeComponent();
         _pollingService = pollingService;
+        _logger = logger;
         LoadSettings();
     }
 
@@ -22,7 +37,7 @@ public partial class SettingsPage : ContentPage
         ApiKeyEntry.Text = Preferences.Get("api_key", string.Empty);
         PanicUrlEntry.Text = Preferences.Get("panic_url", string.Empty);
         var savedPanicFile = Preferences.Get("panic_file_path", string.Empty);
-        PanicFileLabel.Text = string.IsNullOrEmpty(savedPanicFile) ? "No local file selected." : savedPanicFile;
+        PanicFileLabel.Text = string.IsNullOrEmpty(savedPanicFile) ? "No local file selected." : "Local file set!";
     }
 
     private async void OnSaveClicked(object sender, EventArgs e)
@@ -40,11 +55,9 @@ public partial class SettingsPage : ContentPage
 
     private async void OnSelectPanicFileClicked(object sender, EventArgs e)
     {
-        var status = await Permissions.CheckStatusAsync<Permissions.StorageRead>();
-        if (status != PermissionStatus.Granted)
-        {
-            status = await Permissions.RequestAsync<Permissions.StorageRead>();
-        }
+        // The entire file picker logic is now wrapped for Android
+#if ANDROID
+        var status = await Permissions.RequestAsync<ReadMediaImagesPermission>();
 
         if (status == PermissionStatus.Granted)
         {
@@ -56,13 +69,25 @@ public partial class SettingsPage : ContentPage
 
             if (result != null)
             {
-                Preferences.Set("panic_file_path", result.FullPath);
-                PanicFileLabel.Text = result.FullPath;
+                var newPath = Path.Combine(FileSystem.AppDataDirectory, "panic_wallpaper.jpg");
+                using (var stream = await result.OpenReadAsync())
+                using (var newStream = File.OpenWrite(newPath))
+                {
+                    await stream.CopyToAsync(newStream);
+                }
+
+                Preferences.Set("panic_file_path", newPath);
+                PanicFileLabel.Text = "Local file set!";
+                _logger.Add($"Panic wallpaper set to internal path: {newPath}");
             }
         }
         else
         {
-            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Storage permission not granted.").Show());
+            await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Storage permission is required to select a local file.", ToastDuration.Long).Show());
         }
+#else
+        // Show a message on other platforms where this feature isn't implemented
+        await DisplayAlert("Not Supported", "Selecting a local file is only supported on Android.", "OK");
+#endif
     }
 }

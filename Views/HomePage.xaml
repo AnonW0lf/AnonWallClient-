@@ -17,6 +17,11 @@
         </Border>
 
         <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
+        <Label Text="Service Actions (for testing):" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Button Grid.Column="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
+            <Button Grid.Column="1" Text="Exit App" Clicked="OnExitClicked" />
+        </Grid>
 
     </VerticalStackLayout>
 </ContentPage>
