@@ -6,7 +6,6 @@ using System.Collections.Generic;
 
 namespace AnonWallClient.Views;
 
-// --- Custom Permission Definition ---
 #if ANDROID
 public class ReadMediaImagesPermission : Permissions.BasePlatformPermission
 {
@@ -55,7 +54,6 @@ public partial class SettingsPage : ContentPage
 
     private async void OnSelectPanicFileClicked(object sender, EventArgs e)
     {
-        // The entire file picker logic is now wrapped for Android
 #if ANDROID
         var status = await Permissions.RequestAsync<ReadMediaImagesPermission>();
 
@@ -86,8 +84,7 @@ public partial class SettingsPage : ContentPage
             await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Storage permission is required to select a local file.", ToastDuration.Long).Show());
         }
 #else
-        // Show a message on other platforms where this feature isn't implemented
-        await DisplayAlert("Not Supported", "Selecting a local file is only supported on Android.", "OK");
+        await DisplayAlert("Not Supported", "Selecting a local file is only supported on Windows in this version.", "OK");
 #endif
     }
 }

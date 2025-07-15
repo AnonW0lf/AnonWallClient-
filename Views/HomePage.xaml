@@ -3,25 +3,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AnonWallClient.Views.HomePage"
              Title="Home">
-    <VerticalStackLayout Padding="20" Spacing="10">
-        
-        <Label Text="Respond to Current Wallpaper" FontSize="16" FontAttributes="Bold"/>
-        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-            <Button Grid.Column="0" Text="Horny" Clicked="OnHornyClicked" />
-            <Button Grid.Column="1" Text="Disgust" Clicked="OnDisgustClicked" />
-            <Button Grid.Column="2" Text="Came" Clicked="OnCameClicked" />
-        </Grid>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="10">
 
-        <Border StrokeThickness="1" Padding="5" Margin="0,10,0,0">
-            <Editor x:Name="LogEditor" IsReadOnly="True" />
-        </Border>
+            <Label Text="Respond to Current Wallpaper" FontSize="16" FontAttributes="Bold"/>
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="Horny" Clicked="OnHornyClicked" />
+                <Button Grid.Column="1" Text="Disgust" Clicked="OnDisgustClicked" />
+                <Button Grid.Column="2" Text="Came" Clicked="OnCameClicked" />
+            </Grid>
 
-        <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
-        <Label Text="Service Actions (for testing):" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
-        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-            <Button Grid.Column="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
-            <Button Grid.Column="1" Text="Exit App" Clicked="OnExitClicked" />
-        </Grid>
+            <Border StrokeThickness="1" Padding="5" Margin="0,10,0,0">
+                <Editor x:Name="LogEditor" IsReadOnly="True" />
+            </Border>
 
-    </VerticalStackLayout>
+            <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
+
+            <Label Text="Service Actions (for testing):" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
+                <Button Grid.Column="1" Text="Exit App" Clicked="OnExitClicked" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using AnonWallClient.Background;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AnonWallClient.Views;
 
@@ -10,21 +11,54 @@ public partial class HomePage : ContentPage
 {
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
+    private readonly IServiceProvider _serviceProvider;
+    private bool _isServiceStarted = false;
 
-    public HomePage(AppLogService logger, PollingService pollingService)
+    public HomePage(AppLogService logger, PollingService pollingService, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _logger = logger;
         _pollingService = pollingService;
+        _serviceProvider = serviceProvider;
 
         _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
         LogEditor.Text = string.Join(Environment.NewLine, _logger.Logs);
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
-        // This logic is now handled in the AndroidForegroundService and AppShell
+
+        if (!_isServiceStarted)
+        {
+            _isServiceStarted = true;
+
+#if ANDROID
+            var status = await Permissions.CheckStatusAsync<Permissions.PostNotifications>();
+            if (status != PermissionStatus.Granted)
+            {
+                status = await Permissions.RequestAsync<Permissions.PostNotifications>();
+            }
+
+            if (status == PermissionStatus.Granted)
+            {
+                var serviceManager = _serviceProvider.GetService<IForegroundServiceManager>();
+                serviceManager?.StartService();
+            }
+            else
+            {
+                _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
+            }
+#else
+            _ = Task.Run(() => _pollingService.StartPollingAsync(new CancellationToken()));
+#endif
+
+            var savedLinkId = Preferences.Get("link_id", string.Empty);
+            if (!string.IsNullOrEmpty(savedLinkId))
+            {
+                _pollingService.EnablePolling();
+            }
+        }
     }
 
     private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -46,22 +80,18 @@ public partial class HomePage : ContentPage
 
         if (string.IsNullOrWhiteSpace(linkId) || string.IsNullOrWhiteSpace(apiKey))
         {
-            _logger.Add("ERROR: Link ID and API Key must be set to send a response.");
             await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("ERROR: Link ID and API Key must be set.", ToastDuration.Long).Show());
             return;
         }
 
-        _logger.Add($"Sending '{responseType}' response...");
         var (isSuccess, errorMessage) = await _pollingService.PostResponseAsync(linkId, apiKey, responseType);
 
         if (isSuccess)
         {
-            _logger.Add("Response sent successfully!");
             await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("Response Sent!", ToastDuration.Short).Show());
         }
         else
         {
-            _logger.Add($"Failed to send response: {errorMessage}");
             await MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"Failed: {errorMessage}", ToastDuration.Long).Show());
         }
     }
@@ -69,25 +99,19 @@ public partial class HomePage : ContentPage
     private async void OnCopyLogClicked(object sender, EventArgs e)
     {
         await Clipboard.SetTextAsync(LogEditor.Text);
-        _logger.Add("Log copied to clipboard.");
     }
 
-    // --- ADDING THESE TWO MISSING METHODS ---
     private void OnPanicClicked(object sender, EventArgs e)
     {
         _logger.Add("UI Panic button clicked.");
         var panicPath = Preferences.Get("panic_file_path", string.Empty);
-        if (string.IsNullOrEmpty(panicPath))
-        {
-            panicPath = Preferences.Get("panic_url", string.Empty);
-        }
+        if (string.IsNullOrEmpty(panicPath)) panicPath = Preferences.Get("panic_url", string.Empty);
 
         if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
         {
             var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
             _ = wallpaperService?.SetWallpaperAsync(panicPath);
         }
-
         OnExitClicked(sender, e);
     }
 
@@ -95,7 +119,7 @@ public partial class HomePage : ContentPage
     {
         _logger.Add("UI Exit button clicked.");
 #if ANDROID
-        var serviceManager = this.Handler!.MauiContext!.Services.GetService<IForegroundServiceManager>();
+        var serviceManager = _serviceProvider.GetService<IForegroundServiceManager>();
         serviceManager?.StopService();
 #endif
         Application.Current?.Quit();

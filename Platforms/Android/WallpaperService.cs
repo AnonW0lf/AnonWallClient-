@@ -1,59 +1,77 @@
 ﻿using Android.App;
 using Android.Graphics;
 using AnonWallClient.Services;
+using System.IO;
 
 namespace AnonWallClient.Platforms.Android;
 
-public class WallpaperService(HttpClient httpClient, AppLogService logger) : IWallpaperService
+public class WallpaperService : IWallpaperService
 {
-    public async Task<bool> SetWallpaperAsync(string imageUrl)
+    private readonly HttpClient _httpClient;
+    private readonly AppLogService _logger;
+
+    public WallpaperService(IHttpClientFactory httpClientFactory, AppLogService logger)
     {
-        logger.Add("Android Service: SetWallpaperAsync called.");
+        _httpClient = httpClientFactory.CreateClient("WalltakerClient");
+        _logger = logger;
+    }
+
+    public async Task<bool> SetWallpaperAsync(string imagePathOrUrl)
+    {
+        _logger.Add("Android Service: SetWallpaperAsync called.");
         try
         {
             var wallpaperManager = WallpaperManager.GetInstance(global::Android.App.Application.Context);
             if (wallpaperManager == null)
             {
-                logger.Add("Android Service ERROR: WallpaperManager instance is null.");
+                _logger.Add("Android Service ERROR: WallpaperManager instance is null.");
                 return false;
             }
-            logger.Add("Android Service: Got WallpaperManager instance.");
+            _logger.Add("Android Service: Got WallpaperManager instance.");
 
-            logger.Add("Android Service: Starting image download...");
-            using var response = await httpClient.GetAsync(imageUrl);
-            logger.Add($"Android Service: HTTP response received with status: {response.StatusCode}");
-
-            if (!response.IsSuccessStatusCode)
+            Stream imageStream;
+            // Check if the input is a web URL or a local file path
+            if (Uri.IsWellFormedUriString(imagePathOrUrl, UriKind.Absolute))
             {
-                logger.Add("Android Service ERROR: Download failed.");
-                return false;
+                _logger.Add("Android Service: Path is a URL, downloading...");
+                var response = await _httpClient.GetAsync(imagePathOrUrl);
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.Add($"Failed to download image. Status: {response.StatusCode}");
+                    return false;
+                }
+                imageStream = await response.Content.ReadAsStreamAsync();
+            }
+            else
+            {
+                _logger.Add("Android Service: Path is a local file, opening stream...");
+                // It's a local file path, open a stream to it
+                imageStream = new FileStream(imagePathOrUrl, FileMode.Open, FileAccess.Read);
             }
 
-            logger.Add("Android Service: Reading image stream...");
-            using var stream = await response.Content.ReadAsStreamAsync();
-            logger.Add("Android Service: Decoding stream to bitmap...");
-            using var bitmap = await BitmapFactory.DecodeStreamAsync(stream);
+            _logger.Add("Android Service: Decoding stream to bitmap...");
+            using var bitmap = await BitmapFactory.DecodeStreamAsync(imageStream);
+            await imageStream.DisposeAsync(); // Clean up the stream
 
             if (bitmap != null)
             {
-                logger.Add($"Android Service: Bitmap decoded successfully. Size: {bitmap.Width}x{bitmap.Height}");
-                logger.Add("Android Service: Calling native SetBitmap...");
+                _logger.Add($"Android Service: Bitmap decoded successfully. Size: {bitmap.Width}x{bitmap.Height}");
+                _logger.Add("Android Service: Calling native SetBitmap...");
 
                 wallpaperManager.SetBitmap(bitmap);
 
-                logger.Add("Android Service: Native SetBitmap call completed."); // We may not see this if it crashes
+                _logger.Add("Android Service: Native SetBitmap call completed.");
                 return true;
             }
             else
             {
-                logger.Add("Android Service ERROR: Failed to decode image into bitmap.");
+                _logger.Add("Android Service ERROR: Failed to decode image into bitmap.");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            // This will catch both C# and Java exceptions
-            logger.Add($"Android Service FATAL ERROR: {ex.GetType().Name} - {ex.Message}");
+            _logger.Add($"Android Service FATAL ERROR: {ex.GetType().Name} - {ex.Message}");
             return false;
         }
     }
