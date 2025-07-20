@@ -1,0 +1,242 @@
+name: Build and Release AnonWallClient
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'AnonWallClient.csproj'
+
+jobs:
+  build-android:
+    runs-on: windows-latest
+    name: Build Android APK
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '11'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build Android
+        run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-android --no-restore
+
+      - name: Publish Android APK
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-android -p:AndroidPackageFormat=apk -o ./artifacts/android
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ./artifacts/android/*.apk
+
+  build-windows:
+    runs-on: windows-latest
+    name: Build Windows Application
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build Windows
+        run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-windows10.0.19041.0 --no-restore
+
+      - name: Publish Windows Application
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-windows10.0.19041.0 -o ./artifacts/windows
+
+      - name: Create Windows ZIP
+        run: |
+          cd ./artifacts/windows
+          7z a -tzip ../../AnonWallClient-Windows.zip *
+
+      - name: Upload Windows Application
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: AnonWallClient-Windows.zip
+
+  build-ios:
+    runs-on: macos-latest
+    name: Build iOS Application
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build iOS
+        run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-ios --no-restore
+
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: bin/Release/net8.0-ios/
+
+  build-maccatalyst:
+    runs-on: macos-latest
+    name: Build macOS Application
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.PROJECT_PATH }}
+
+      - name: Build macOS
+        run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-maccatalyst --no-restore
+
+      - name: Publish macOS Application
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-maccatalyst -o ./artifacts/macos
+
+      - name: Create macOS ZIP
+        run: |
+          cd ./artifacts/macos
+          zip -r ../../AnonWallClient-macOS.zip *
+
+      - name: Upload macOS Application
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: AnonWallClient-macOS.zip
+
+  create-release:
+    needs: [build-android, build-windows, build-ios, build-maccatalyst]
+    runs-on: ubuntu-latest
+    name: Create GitHub Release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release-artifacts
+
+      - name: Get version from tag or input
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << EOF
+          # AnonWallClient ${{ steps.get_version.outputs.version }}
+          
+          ## What's New
+          - Cross-platform .NET MAUI application
+          - Support for Android, Windows, iOS, and macOS
+          - Automatic wallpaper management with Walltaker integration
+          - Background polling service with customizable intervals
+          - Wallpaper history and management features
+          
+          ## Downloads
+          - **Android**: AnonWallClient APK for Android devices
+          - **Windows**: Self-contained Windows application
+          - **iOS**: iOS build (requires development provisioning)
+          - **macOS**: macOS Catalyst application
+          
+          ## Installation
+          - **Android**: Download and install the APK file
+          - **Windows**: Extract the ZIP file and run AnonWallClient.exe
+          - **macOS**: Extract the ZIP file and run the .app bundle
+          
+          ## System Requirements
+          - **Android**: Android 5.0+ (API level 21)
+          - **Windows**: Windows 10 version 1809 or later
+          - **iOS**: iOS 11.0 or later
+          - **macOS**: macOS 10.13 or later
+          
+          For setup instructions and configuration, please see the [README](https://github.com/${{ github.repository }}).
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: AnonWallClient ${{ steps.get_version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}
+          files: |
+            release-artifacts/android-apk/*.apk
+            release-artifacts/windows-app/*.zip
+            release-artifacts/macos-app/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notification:
+    needs: [create-release]
+    runs-on: ubuntu-latest
+    name: Post-Release Notification
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.create-release.result == 'success'
+        run: |
+          echo "? Release created successfully!"
+          echo "All platform builds completed and artifacts uploaded."
+          
+      - name: Notify failure
+        if: needs.create-release.result == 'failure'
+        run: |
+          echo "? Release creation failed!"
+          echo "Check the workflow logs for details."

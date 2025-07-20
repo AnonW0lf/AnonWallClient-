@@ -1,0 +1,72 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    name: Update NuGet Packages
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install dotnet-outdated tool
+        run: dotnet tool install --global dotnet-outdated-tool
+
+      - name: Check for outdated packages
+        run: dotnet outdated --fail-on-updates
+
+      - name: Update packages
+        run: |
+          # Update MAUI packages
+          dotnet add package Microsoft.Maui.Controls
+          dotnet add package Microsoft.Maui.Controls.Compatibility
+          
+          # Update Microsoft Extensions packages
+          dotnet add package Microsoft.Extensions.Logging.Debug
+          dotnet add package Microsoft.Extensions.Http
+          dotnet add package Microsoft.Extensions.Hosting
+          
+          # Update Community Toolkit
+          dotnet add package CommunityToolkit.Maui
+          
+          # Update Windows-specific packages
+          dotnet add package H.NotifyIcon.Maui
+
+      - name: Build to verify updates
+        run: dotnet build AnonWallClient.csproj -c Debug
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: update NuGet packages'
+          title: 'Automated NuGet Package Updates'
+          body: |
+            This PR updates NuGet packages to their latest versions.
+            
+            ## Changes
+            - Updated Microsoft.Maui.Controls packages
+            - Updated Microsoft.Extensions packages  
+            - Updated CommunityToolkit.Maui
+            - Updated other dependencies
+            
+            ## Testing
+            - [x] Build verification completed
+            - [ ] Manual testing required
+            
+            Please review the changes and test thoroughly before merging.
+          branch: update-dependencies
+          delete-branch: true
