@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using AnonWallClient.Background;
 using AnonWallClient.Services;
@@ -40,24 +40,40 @@ public static class MauiProgram
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        // Core services
         builder.Services.AddSingleton<AppLogService>();
+        builder.Services.AddSingleton<SettingsService>();
+        builder.Services.AddSingleton<ImageCacheService>();
+        builder.Services.AddSingleton<WallpaperHistoryService>();
         builder.Services.AddSingleton<WalltakerService>();
         builder.Services.AddSingleton<PollingService>();
-        builder.Services.AddSingleton<SettingsService>();
-        builder.Services.AddSingleton<WallpaperHistoryService>();
+        builder.Services.AddSingleton<PanicService>();
+        builder.Services.AddSingleton<WallpaperManagementService>();
+        builder.Services.AddSingleton<HtmlProfileParserService>();
+        builder.Services.AddSingleton<UserProfileService>();
 
+        // Platform-specific services
 #if ANDROID
         builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
         builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.Android.WallpaperService>();
+        builder.Services.AddSingleton<IAutoStartService, AnonWallClient.Platforms.Android.AndroidAutoStartService>();
 #elif WINDOWS
-        // For Windows, WallpaperService is in the Platforms.Windows namespace
         builder.Services.AddSingleton<IWallpaperService, WallpaperService>();
+        builder.Services.AddSingleton<IAutoStartService, AnonWallClient.Platforms.Windows.WindowsAutoStartService>();
+#elif IOS
+        builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.iOS.WallpaperService>();
+        builder.Services.AddSingleton<IAutoStartService, AnonWallClient.Platforms.iOS.iOSAutoStartService>();
+#elif MACCATALYST
+        builder.Services.AddSingleton<IWallpaperService, AnonWallClient.Platforms.MacCatalyst.WallpaperService>();
+        builder.Services.AddSingleton<IAutoStartService, AnonWallClient.Platforms.MacCatalyst.macOSAutoStartService>();
 #endif
 
+        // UI services
         builder.Services.AddSingleton<AppShell>();
-        builder.Services.AddTransient<HomePage>();
-        builder.Services.AddTransient<SettingsPage>();
-        builder.Services.AddTransient<HistoryPage>();
+        builder.Services.AddTransient<Views.HomePage>();
+        builder.Services.AddTransient<Views.HistoryPage>();
+        builder.Services.AddTransient<Views.SettingsPage>();
+        builder.Services.AddTransient<Views.ProfilePage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

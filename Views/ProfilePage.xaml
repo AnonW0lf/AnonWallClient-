@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AnonWallClient.Views.ProfilePage"
+             Title="Profile">
+    
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style x:Key="StatusBadgeStyle" TargetType="Frame">
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="8,4" />
+                <Setter Property="HasShadow" Value="False" />
+                <Setter Property="Margin" Value="2" />
+            </Style>
+            
+            <Style x:Key="LinkCardStyle" TargetType="Frame">
+                <Setter Property="BackgroundColor" Value="{StaticResource CardBackgroundColor}" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="15" />
+                <Setter Property="Margin" Value="0,5" />
+                <Setter Property="HasShadow" Value="True" />
+            </Style>
+            
+            <Style x:Key="StatCardStyle" TargetType="Frame">
+                <Setter Property="BackgroundColor" Value="{StaticResource CardBackgroundColor}" />
+                <Setter Property="CornerRadius" Value="12" />
+                <Setter Property="Padding" Value="15" />
+                <Setter Property="Margin" Value="2" />
+                <Setter Property="HasShadow" Value="True" />
+            </Style>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            
+            <!-- Loading Indicator -->
+            <ActivityIndicator x:Name="LoadingIndicator" 
+                              IsVisible="True" 
+                              IsRunning="True" 
+                              VerticalOptions="Center" 
+                              HorizontalOptions="Center" />
+            
+            <!-- Main Content (Hidden initially) -->
+            <VerticalStackLayout x:Name="MainContent" IsVisible="False" Spacing="15">
+                
+                <!-- User Info Card -->
+                <Frame BackgroundColor="{StaticResource Primary}" 
+                       CornerRadius="16" 
+                       Padding="20" 
+                       HasShadow="True">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                        
+                        <!-- User Avatar/Icon -->
+                        <Frame Grid.Column="0" 
+                               BackgroundColor="{StaticResource Gray800}"
+                               CornerRadius="25" 
+                               WidthRequest="50" 
+                               HeightRequest="50" 
+                               Padding="0" 
+                               HasShadow="False">
+                            <Label Text="👤" 
+                                   FontSize="24" 
+                                   HorizontalOptions="Center" 
+                                   VerticalOptions="Center" />
+                        </Frame>
+                        
+                        <!-- User Details -->
+                        <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                            <Label x:Name="UsernameLabel" 
+                                   Text="Loading..." 
+                                   FontSize="20" 
+                                   FontAttributes="Bold" 
+                                   TextColor="{StaticResource White}" />
+                            <Label x:Name="UserIdLabel" 
+                                   Text="ID: ..." 
+                                   FontSize="12" 
+                                   TextColor="{StaticResource Gray200}" />
+                            <Label x:Name="LastOnlineLabel" 
+                                   Text="" 
+                                   FontSize="10" 
+                                   TextColor="{StaticResource Gray200}" />
+                        </VerticalStackLayout>
+                        
+                        <!-- Online Status -->
+                        <Frame x:Name="OnlineStatusFrame" 
+                               Grid.Column="2" 
+                               BackgroundColor="Green" 
+                               CornerRadius="8" 
+                               Padding="6,3" 
+                               HasShadow="False">
+                            <Label x:Name="OnlineStatusLabel" 
+                                   Text="🟢 Online" 
+                                   FontSize="10" 
+                                   TextColor="White" 
+                                   FontAttributes="Bold" />
+                        </Frame>
+                    </Grid>
+                </Frame>
+
+                <!-- Profile Description (if available) -->
+                <Frame x:Name="ProfileDescriptionFrame" 
+                       Style="{StaticResource LinkCardStyle}" 
+                       IsVisible="False">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="📝 Profile" 
+                               FontSize="14" 
+                               FontAttributes="Bold" 
+                               TextColor="{StaticResource PrimaryTextColor}" />
+                        <Label x:Name="ProfileDescriptionLabel" 
+                               FontSize="12" 
+                               TextColor="{StaticResource SecondaryTextColor}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Enhanced Stats -->
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                    <Frame Grid.Column="0" Style="{StaticResource StatCardStyle}">
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                            <Label x:Name="SetCountLabel" 
+                                   Text="0" 
+                                   FontSize="20" 
+                                   FontAttributes="Bold" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource PrimaryTextColor}" />
+                            <Label Text="Sets" 
+                                   FontSize="10" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource SecondaryTextColor}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <Frame Grid.Column="1" Style="{StaticResource StatCardStyle}">
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                            <Label x:Name="LinksCountLabel" 
+                                   Text="0" 
+                                   FontSize="20" 
+                                   FontAttributes="Bold" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource PrimaryTextColor}" />
+                            <Label Text="Links" 
+                                   FontSize="10" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource SecondaryTextColor}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <Frame Grid.Column="2" Style="{StaticResource StatCardStyle}">
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                            <Label x:Name="OrgasmsLabel" 
+                                   Text="0" 
+                                   FontSize="20" 
+                                   FontAttributes="Bold" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource PrimaryTextColor}" />
+                            <Label Text="Caused" 
+                                   FontSize="10" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource SecondaryTextColor}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <Frame Grid.Column="3" Style="{StaticResource StatCardStyle}">
+                        <VerticalStackLayout HorizontalOptions="Center" Spacing="2">
+                            <Label x:Name="RecentOrgasmsLabel" 
+                                   Text="0" 
+                                   FontSize="20" 
+                                   FontAttributes="Bold" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource PrimaryTextColor}" />
+                            <Label Text="Week" 
+                                   FontSize="10" 
+                                   HorizontalOptions="Center" 
+                                   TextColor="{StaticResource SecondaryTextColor}" />
+                        </VerticalStackLayout>
+                    </Frame>
+                </Grid>
+
+                <!-- Status Badges -->
+                <FlexLayout x:Name="StatusBadgesLayout" 
+                           Direction="Row" 
+                           Wrap="Wrap" 
+                           JustifyContent="Start" 
+                           AlignItems="Center">
+                    <!-- Badges will be added dynamically -->
+                </FlexLayout>
+
+                <!-- Recent Wallpapers Gallery -->
+                <VerticalStackLayout x:Name="RecentWallpapersSection" Spacing="10" IsVisible="False">
+                    <Label Text="🖼️ Recent Wallpapers" 
+                           FontSize="16" 
+                           FontAttributes="Bold" 
+                           TextColor="{StaticResource PrimaryTextColor}" />
+                    
+                    <CollectionView x:Name="RecentWallpapersCollection" 
+                                   HeightRequest="120">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Frame CornerRadius="8" Padding="2" HasShadow="True" BackgroundColor="{StaticResource CardBackgroundColor}">
+                                    <Image Source="{Binding ThumbnailUrl}" 
+                                           WidthRequest="100" 
+                                           HeightRequest="100" 
+                                           Aspect="AspectFill" />
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+
+                <!-- Activity Chart Placeholder -->
+                <Frame x:Name="ActivityChartFrame" 
+                       Style="{StaticResource LinkCardStyle}" 
+                       IsVisible="False">
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="📊 Weekly Activity" 
+                               FontSize="14" 
+                               FontAttributes="Bold" 
+                               TextColor="{StaticResource PrimaryTextColor}" />
+                        <Label x:Name="ActivityChartLabel" 
+                               Text="Activity data will be displayed here" 
+                               FontSize="12" 
+                               HorizontalOptions="Center" 
+                               TextColor="{StaticResource SecondaryTextColor}" />
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Links Section -->
+                <VerticalStackLayout x:Name="LinksSection" Spacing="10">
+                    <Label Text="🔗 My Links" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           Margin="0,10,0,0" 
+                           TextColor="{StaticResource PrimaryTextColor}" />
+                    
+                    <!-- Links will be added dynamically -->
+                    <VerticalStackLayout x:Name="LinksContainer" Spacing="10" />
+                </VerticalStackLayout>
+
+                <!-- Refresh Button -->
+                <Button x:Name="RefreshButton" 
+                        Text="🔄 Refresh Profile" 
+                        BackgroundColor="{StaticResource Secondary}" 
+                        TextColor="White" 
+                        CornerRadius="8" 
+                        Margin="0,20,0,0" 
+                        Clicked="OnRefreshClicked" />
+            </VerticalStackLayout>
+
+            <!-- Error State -->
+            <VerticalStackLayout x:Name="ErrorContent" IsVisible="False" Spacing="15">
+                <Label Text="⚠️" 
+                       FontSize="48" 
+                       HorizontalOptions="Center" />
+                <Label x:Name="ErrorMessageLabel" 
+                       Text="Unable to load profile" 
+                       FontSize="16" 
+                       HorizontalOptions="Center" 
+                       HorizontalTextAlignment="Center" 
+                       TextColor="{StaticResource PrimaryTextColor}" />
+                <Button Text="Retry" 
+                        BackgroundColor="{StaticResource Primary}" 
+                        TextColor="White" 
+                        CornerRadius="8" 
+                        Clicked="OnRetryClicked" 
+                        HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

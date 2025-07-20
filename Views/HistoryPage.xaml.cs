@@ -9,6 +9,7 @@ public partial class HistoryPage : ContentPage
 {
     private readonly WallpaperHistoryService _historyService;
     private readonly SettingsService _settingsService;
+    private List<WallpaperHistoryItem> _allWallpapers = new();
     public ObservableCollection<WallpaperHistoryItem> Wallpapers { get; } = new();
 
     public HistoryPage(WallpaperHistoryService historyService, SettingsService settingsService)
@@ -23,6 +24,9 @@ public partial class HistoryPage : ContentPage
         
         // Platform-specific optimizations for CollectionView
         ConfigureCollectionViewForPlatform();
+        
+        // Set default filter
+        WallpaperTypeFilterPicker.SelectedIndex = 0; // "All Types"
         
         LoadWallpapers();
         BindingContext = this;
@@ -71,12 +75,13 @@ public partial class HistoryPage : ContentPage
     {
         try
         {
-            Wallpapers.Clear();
+            _allWallpapers.Clear();
             
             // Check if history is disabled
             if (!_settingsService.IsHistoryEnabled())
             {
                 // History is disabled, don't load anything
+                ApplyFilter();
                 return;
             }
             
@@ -84,13 +89,47 @@ public partial class HistoryPage : ContentPage
             {
                 // Defensive: skip null or incomplete items
                 if (item != null && !string.IsNullOrEmpty(item.ImageUrl))
-                    Wallpapers.Add(item);
+                    _allWallpapers.Add(item);
             }
+            
+            // Apply current filter
+            ApplyFilter();
         }
         catch (Exception ex)
         {
             MainThread.BeginInvokeOnMainThread(() => 
                 DisplayAlert("Error", $"Failed to load wallpaper history: {ex.Message}", "OK"));
+        }
+    }
+
+    private void OnWallpaperTypeFilterChanged(object sender, EventArgs e)
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        try
+        {
+            Wallpapers.Clear();
+            
+            var filterIndex = WallpaperTypeFilterPicker.SelectedIndex;
+            IEnumerable<WallpaperHistoryItem> filteredItems = filterIndex switch
+            {
+                1 => _allWallpapers.Where(w => w.WallpaperType == WallpaperType.Wallpaper), // Wallpaper Only
+                2 => _allWallpapers.Where(w => w.WallpaperType == WallpaperType.Lockscreen), // Lockscreen Only
+                _ => _allWallpapers // All Types
+            };
+
+            foreach (var item in filteredItems)
+            {
+                Wallpapers.Add(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            MainThread.BeginInvokeOnMainThread(() => 
+                DisplayAlert("Error", $"Failed to apply filter: {ex.Message}", "OK"));
         }
     }
 
@@ -101,22 +140,25 @@ public partial class HistoryPage : ContentPage
         {
             if (newWallpaper != null && !string.IsNullOrEmpty(newWallpaper.ImageUrl))
             {
-                Wallpapers.Insert(0, newWallpaper);
+                _allWallpapers.Insert(0, newWallpaper);
                 
                 // Remove excess items if we exceed max history
                 var maxHistory = _settingsService.GetMaxHistoryLimit();
                 if (maxHistory > 0) // Only manage UI limit if history is enabled
                 {
-                    while (Wallpapers.Count > maxHistory)
+                    while (_allWallpapers.Count > maxHistory)
                     {
-                        Wallpapers.RemoveAt(Wallpapers.Count - 1);
+                        _allWallpapers.RemoveAt(_allWallpapers.Count - 1);
                     }
                 }
                 else
                 {
                     // If history is disabled (0), clear the UI
-                    Wallpapers.Clear();
+                    _allWallpapers.Clear();
                 }
+                
+                // Reapply filter
+                ApplyFilter();
             }
         });
     }
@@ -126,6 +168,7 @@ public partial class HistoryPage : ContentPage
         // Clear UI when history is cleared
         MainThread.BeginInvokeOnMainThread(() =>
         {
+            _allWallpapers.Clear();
             Wallpapers.Clear();
         });
     }
@@ -162,7 +205,7 @@ public partial class HistoryPage : ContentPage
         if (!_settingsService.IsHistoryEnabled())
         {
             // History is disabled
-            EmptyStateIcon.Text = "??";
+            EmptyStateIcon.Text = "📱";
             EmptyStateTitle.Text = "History is disabled";
             EmptyStateMessage.Text = "Enable history in settings to track wallpapers";
             EmptyStateButton.Text = "Enable History";
@@ -170,7 +213,7 @@ public partial class HistoryPage : ContentPage
         else
         {
             // History is enabled but empty
-            EmptyStateIcon.Text = "??";
+            EmptyStateIcon.Text = "📱";
             EmptyStateTitle.Text = "No wallpaper history yet";
             EmptyStateMessage.Text = "Wallpapers you've set will appear here";
             EmptyStateButton.Text = "Go to Settings";
@@ -284,7 +327,8 @@ public partial class HistoryPage : ContentPage
                     var extension = item.ImageUrl.Contains(".jpg") ? ".jpg" : 
                                    item.ImageUrl.Contains(".png") ? ".png" : 
                                    item.ImageUrl.Contains(".gif") ? ".gif" : ".jpg";
-                    fileName = $"wallpaper_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+                    var typePrefix = item.WallpaperType == WallpaperType.Lockscreen ? "lockscreen" : "wallpaper";
+                    fileName = $"{typePrefix}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
                 }
                 
                 var destPath = Path.Combine(saveFolder, fileName);
@@ -408,7 +452,7 @@ public partial class HistoryPage : ContentPage
 
         var closeButton = new Button
         {
-            Text = "?",
+            Text = "✕",
             FontSize = 18,
             BackgroundColor = Colors.Transparent,
             TextColor = Colors.White,
@@ -417,9 +461,10 @@ public partial class HistoryPage : ContentPage
         };
         closeButton.Clicked += async (s, e) => await Navigation.PopModalAsync();
 
+        var typePrefix = item.WallpaperType == WallpaperType.Lockscreen ? "Lockscreen" : "Wallpaper";
         var titleLabel = new Label
         {
-            Text = item.Description ?? "Wallpaper",
+            Text = $"{typePrefix}: {item.Description ?? "Wallpaper"}",
             FontSize = 16,
             FontAttributes = FontAttributes.Bold,
             TextColor = Colors.White,
@@ -493,7 +538,7 @@ public partial class HistoryPage : ContentPage
 
         var detailsLabel = new Label
         {
-            Text = $"Set: {item.SetTime:g}",
+            Text = $"Set: {item.SetTime:g} | Type: {item.WallpaperType}",
             FontSize = 12,
             TextColor = Colors.White
         };
@@ -579,7 +624,8 @@ public partial class HistoryPage : ContentPage
                 var extension = item.ImageUrl.Contains(".jpg") ? ".jpg" : 
                                item.ImageUrl.Contains(".png") ? ".png" : 
                                item.ImageUrl.Contains(".gif") ? ".gif" : ".jpg";
-                fileName = $"wallpaper_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+                var typePrefix = item.WallpaperType == WallpaperType.Lockscreen ? "lockscreen" : "wallpaper";
+                fileName = $"{typePrefix}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
             }
             
             var destPath = Path.Combine(saveFolder, fileName);
@@ -589,7 +635,7 @@ public partial class HistoryPage : ContentPage
             await File.WriteAllBytesAsync(destPath, bytes);
             
             await ShowToastOrAlertAsync($"Saved to {destPath}");
-            saveButton.Text = "Saved ?";
+            saveButton.Text = "Saved ✓";
             await Task.Delay(2000); // Show confirmation for 2 seconds
         }
         catch (Exception ex)

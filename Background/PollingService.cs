@@ -1,10 +1,9 @@
-﻿using AnonWallClient.Services;
+using AnonWallClient.Services;
 
 namespace AnonWallClient.Background;
 
 public class PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger, SettingsService settingsService)
 {
-    private string _linkId = "";
     private bool _isPollingEnabled = false;
     private readonly SettingsService _settingsService = settingsService;
 
@@ -95,9 +94,15 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
             {
                 if (_isPollingEnabled)
                 {
-                    _linkId = _settingsService.GetLinkId();
+                    // Get LinkId settings
+                    var linkIdMode = _settingsService.GetLinkIdMode();
+                    var wallpaperLinkId = _settingsService.GetWallpaperLinkId();
+                    var lockscreenLinkId = _settingsService.GetLockscreenLinkId();
 
-                    if (!string.IsNullOrWhiteSpace(_linkId))
+                    // Check if we have at least one valid LinkId
+                    var hasValidLinkId = !string.IsNullOrWhiteSpace(wallpaperLinkId) || !string.IsNullOrWhiteSpace(lockscreenLinkId);
+
+                    if (hasValidLinkId)
                     {
                         // Check network connectivity before making API calls
                         if (!IsNetworkAvailable())
@@ -106,42 +111,56 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
                         }
                         else
                         {
-                            logger.Add($"Checking for wallpaper with Link ID: {_linkId}");
+                            logger.Add($"Checking for wallpapers - Mode: {linkIdMode}, " +
+                                      $"Wallpaper LinkId: {(!string.IsNullOrEmpty(wallpaperLinkId) ? wallpaperLinkId : "Not set")}, " +
+                                      $"Lockscreen LinkId: {(!string.IsNullOrEmpty(lockscreenLinkId) ? lockscreenLinkId : "Not set")}");
                             
                             try
                             {
-                                var newImageUrl = await walltakerService.GetNewWallpaperUrlAsync(_linkId);
+                                // Check for new wallpapers using the new multi-LinkId method
+                                var newWallpapers = await walltakerService.CheckMultipleLinkIdsAsync(
+                                    wallpaperLinkId, lockscreenLinkId, linkIdMode);
 
-                                if (newImageUrl != null)
+                                if (newWallpapers.Any())
                                 {
-                                    logger.Add($"New wallpaper found: {newImageUrl}");
-                                    try
+                                    logger.Add($"Found {newWallpapers.Count} new wallpaper(s)");
+                                    
+                                    // Process each new wallpaper
+                                    foreach (var (imageUrl, wallpaperType) in newWallpapers)
                                     {
-                                        var success = await wallpaperService.SetWallpaperAsync(newImageUrl);
-                                        if (!success)
+                                        logger.Add($"Setting new {wallpaperType}: {imageUrl}");
+                                        try
                                         {
-                                            logger.Add("Failed to set wallpaper.");
+                                            var success = await wallpaperService.SetWallpaperAsync(
+                                                imageUrl, 
+                                                _settingsService.GetWallpaperFitMode(), 
+                                                wallpaperType);
+                                                
+                                            if (!success)
+                                            {
+                                                logger.Add($"Failed to set {wallpaperType}.");
+                                            }
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Add($"Error setting wallpaper: {ex.Message}");
+                                        catch (Exception ex)
+                                        {
+                                            logger.Add($"Error setting {wallpaperType}: {ex.Message}");
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    logger.Add("No new wallpaper found.");
+                                    logger.Add("No new wallpapers found.");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                logger.Add($"Error checking for new wallpaper: {ex.Message}");
+                                logger.Add($"Error checking for new wallpapers: {ex.Message}");
                             }
                         }
                     }
                     else
                     {
-                        logger.Add("Link ID not set, skipping wallpaper check.");
+                        logger.Add("No Link IDs set, skipping wallpaper check.");
                     }
                 }
 

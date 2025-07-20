@@ -3,15 +3,29 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AnonWallClient.Views.HistoryPage"
              Title="Wallpaper History">
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*">
         <!-- Header with Reset Button -->
         <Grid Grid.Row="0" Padding="20,10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <Label Grid.Column="0" Text="Wallpaper History" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
             <Button Grid.Column="1" Text="Reset History" BackgroundColor="DarkRed" TextColor="White" Clicked="OnResetHistoryClicked" />
         </Grid>
         
+        <!-- Filter Options -->
+        <StackLayout Grid.Row="1" Orientation="Horizontal" Padding="20,5" Spacing="10">
+            <Label Text="Filter:" FontSize="14" VerticalOptions="Center" />
+            <Picker x:Name="WallpaperTypeFilterPicker" 
+                    SelectedIndexChanged="OnWallpaperTypeFilterChanged"
+                    MinimumWidthRequest="150">
+                <Picker.Items>
+                    <x:String>All Types</x:String>
+                    <x:String>Wallpaper Only</x:String>
+                    <x:String>Lockscreen Only</x:String>
+                </Picker.Items>
+            </Picker>
+        </StackLayout>
+        
         <!-- History List -->
-        <CollectionView x:Name="HistoryCollectionView" Grid.Row="1" ItemsSource="{Binding Wallpapers}">
+        <CollectionView x:Name="HistoryCollectionView" Grid.Row="2" ItemsSource="{Binding Wallpapers}">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Frame Style="{StaticResource HistoryItemFrameStyle}">
@@ -29,7 +43,21 @@
                                             <TapGestureRecognizer Tapped="OnImageTapped" CommandParameter="{Binding .}" />
                                         </Image.GestureRecognizers>
                                     </Image>
-                                    <!-- Small overlay icon to indicate the image is clickable -->
+                                
+                                    <!-- Wallpaper Type Badge -->
+                                    <Frame BackgroundColor="{Binding WallpaperType, Converter={StaticResource WallpaperTypeToBadgeColorConverter}}"
+                                           Padding="6,2"
+                                           CornerRadius="8"
+                                           HorizontalOptions="Start"
+                                           VerticalOptions="Start"
+                                           Margin="4">
+                                        <Label Text="{Binding WallpaperType, Converter={StaticResource WallpaperTypeToTextConverter}}"
+                                               FontSize="10"
+                                               TextColor="White"
+                                               FontAttributes="Bold" />
+                                    </Frame>
+                                    
+                                    <!-- Clickable indicator overlay -->
                                     <Label Text="🔍" 
                                            FontSize="12"
                                            TextColor="White"

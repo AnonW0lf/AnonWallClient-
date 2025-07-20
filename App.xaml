@@ -1,6 +1,7 @@
-﻿<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:AnonWallClient"
+             xmlns:converters="clr-namespace:AnonWallClient.Converters"
              x:Class="AnonWallClient.App">
     <Application.Resources>
         <ResourceDictionary>
@@ -8,6 +9,10 @@
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Value Converters -->
+            <converters:WallpaperTypeToTextConverter x:Key="WallpaperTypeToTextConverter" />
+            <converters:WallpaperTypeToBadgeColorConverter x:Key="WallpaperTypeToBadgeColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

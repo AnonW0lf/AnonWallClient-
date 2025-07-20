@@ -7,14 +7,31 @@
         <VerticalStackLayout Padding="20" Spacing="10">
 
             <!-- Current Wallpaper Info -->
-            <Frame Margin="0,0,0,10" Padding="10" HasShadow="True" BackgroundColor="Transparent">
-                <StackLayout Orientation="Horizontal" Spacing="10">
-                    <Image x:Name="CurrentWallpaperImage" WidthRequest="80" HeightRequest="80" BackgroundColor="Transparent" />
-                    <StackLayout>
-                        <Label x:Name="CurrentWallpaperDescription" FontAttributes="Bold" />
-                        <Label x:Name="CurrentWallpaperSetTime" FontSize="12" />
-                    </StackLayout>
-                </StackLayout>
+            <Frame Margin="0,0,0,10" Padding="15" HasShadow="True" BackgroundColor="Transparent">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="15" RowSpacing="5">
+                    
+                    <!-- Main wallpaper image -->
+                    <Image x:Name="CurrentWallpaperImage" 
+                           Grid.Column="0" Grid.RowSpan="3"
+                           WidthRequest="100" HeightRequest="100" 
+                           BackgroundColor="Transparent" 
+                           Aspect="AspectFill" />
+                    
+                    <!-- Title -->
+                    <Label Grid.Column="1" Grid.Row="0" 
+                           Text="Current Wallpapers" 
+                           FontSize="16" FontAttributes="Bold" />
+                    
+                    <!-- Description with wallpaper type indicators -->
+                    <Label x:Name="CurrentWallpaperDescription" 
+                           Grid.Column="1" Grid.Row="1"
+                           FontSize="14" />
+                    
+                    <!-- Set time information -->
+                    <Label x:Name="CurrentWallpaperSetTime" 
+                           Grid.Column="1" Grid.Row="2"
+                           FontSize="12" />
+                </Grid>
             </Frame>
 
             <Label Text="Respond to Current Wallpaper" FontSize="16" FontAttributes="Bold"/>
@@ -45,9 +62,17 @@
             <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
 
             <Label Text="Service Actions:" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                <Button Grid.Column="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
-                <Button Grid.Column="1" Text="Exit App" Clicked="OnExitClicked" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="10">
+                <Button Grid.Column="0" Grid.Row="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
+                <Button Grid.Column="1" Grid.Row="0" Text="Exit App" Clicked="OnExitClicked" />
+                
+                <!-- Windows-specific restore button -->
+                <Button x:Name="RestoreButton" 
+                        Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                        Text="Restore Original Wallpapers" 
+                        BackgroundColor="DarkBlue" 
+                        Clicked="OnRestoreClicked"
+                        IsVisible="False" />
             </Grid>
 
         </VerticalStackLayout>

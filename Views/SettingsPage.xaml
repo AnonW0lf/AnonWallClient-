@@ -6,10 +6,83 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="15">
 
-            <Label Text="General Settings" FontSize="18" FontAttributes="Bold" />
-            <Entry x:Name="LinkIdEntry" Placeholder="Walltaker Link ID" />
+            <!-- Link ID Configuration Section -->
+            <Label Text="Link ID Configuration" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Choose how to configure your Walltaker Link IDs" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+            
+            <StackLayout Spacing="10">
+                <Label Text="Link ID Mode:" FontSize="14" FontAttributes="Bold" />
+                <Picker x:Name="LinkIdModePicker" 
+                        SelectedIndexChanged="OnLinkIdModeChanged">
+                    <Picker.Items>
+                        <x:String>Use same Link ID for both wallpaper and lockscreen</x:String>
+                        <x:String>Use separate Link IDs for wallpaper and lockscreen</x:String>
+                    </Picker.Items>
+                </Picker>
+            </StackLayout>
+
+            <!-- Shared Link ID Section -->
+            <StackLayout x:Name="SharedLinkIdSection" Spacing="10">
+                <Label Text="Shared Link ID (used for both wallpaper and lockscreen):" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                <Entry x:Name="SharedLinkIdEntry" Placeholder="Walltaker Link ID" />
+            </StackLayout>
+
+            <!-- Separate Link IDs Section -->
+            <StackLayout x:Name="SeparateLinkIdsSection" Spacing="10" IsVisible="False">
+                <Label Text="Wallpaper Link ID:" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                <Entry x:Name="WallpaperLinkIdEntry" Placeholder="Wallpaper Link ID" />
+                
+                <Label Text="Lockscreen Link ID:" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                <Entry x:Name="LockscreenLinkIdEntry" Placeholder="Lockscreen Link ID" />
+            </StackLayout>
+
+            <!-- API Key -->
             <Entry x:Name="ApiKeyEntry" Placeholder="Walltaker API Key" />
 
+            <!-- Wallpaper Settings -->
+            <Label Text="Wallpaper Settings" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Label Text="Configure how wallpapers are displayed and fitted" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+            
+            <StackLayout Spacing="10">
+                <Label Text="Wallpaper Fit Mode:" FontSize="14" FontAttributes="Bold" />
+                <Picker x:Name="WallpaperFitModePicker">
+                    <Picker.Items>
+                        <x:String>Fill (stretch to fill screen)</x:String>
+                        <x:String>Fit (maintain aspect ratio, may have borders)</x:String>
+                        <x:String>Center (original size, centered)</x:String>
+                        <x:String>Tile (repeat pattern)</x:String>
+                        <x:String>Stretch (same as fill)</x:String>
+                    </Picker.Items>
+                </Picker>
+            </StackLayout>
+
+            <!-- Image Caching -->
+            <Label Text="Image Caching" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Label Text="Cache downloaded images to improve performance and reduce bandwidth" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+            
+            <StackLayout Orientation="Horizontal" Spacing="10">
+                <CheckBox x:Name="EnableCacheCheckBox" />
+                <Label Text="Enable image caching" VerticalOptions="Center"/>
+            </StackLayout>
+
+            <StackLayout x:Name="CacheOptionsSection" Spacing="10">
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                    <Label Grid.Column="0" Text="Max cache size (MB):" VerticalOptions="Center"/>
+                    <Entry Grid.Column="1" x:Name="MaxCacheSizeEntry" Keyboard="Numeric" Text="100" Placeholder="10-1000"/>
+                </Grid>
+                
+                <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                    <Label Grid.Column="0" Text="Cache expiry (days):" VerticalOptions="Center"/>
+                    <Entry Grid.Column="1" x:Name="CacheExpiryEntry" Keyboard="Numeric" Text="7" Placeholder="1-30"/>
+                </Grid>
+
+                <StackLayout Orientation="Horizontal" Spacing="10">
+                    <Label x:Name="CacheInfoLabel" Text="Cache: 0MB / 100MB, Files: 0" FontSize="12" VerticalOptions="Center" />
+                    <Button Text="Clear Cache" Clicked="OnClearCacheClicked" FontSize="12" />
+                </StackLayout>
+            </StackLayout>
+
+            <!-- Polling Options -->
             <Label Text="Polling Options" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
                 <Label Grid.Column="0" Text="Polling Interval (seconds):" VerticalOptions="Center"/>
@@ -20,6 +93,7 @@
                 <Label Text="Poll only on Wi-Fi" VerticalOptions="Center"/>
             </StackLayout>
 
+            <!-- History Settings -->
             <Label Text="History Settings" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Label Text="Maximum number of wallpapers to keep in history (0 = disabled):" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
             <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
@@ -27,6 +101,7 @@
                 <Entry Grid.Column="1" x:Name="MaxHistoryEntry" Keyboard="Numeric" Text="20" Placeholder="0 = disabled, default = 20"/>
             </Grid>
 
+            <!-- Wallpaper Save Location -->
             <Label Text="Wallpaper Save Location" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Label Text="Folder where wallpapers from history will be saved:" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
             <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="0,10,0,0">
@@ -34,6 +109,7 @@
                 <Button Grid.Column="1" Text="Change Folder" Clicked="OnSelectSaveFolderClicked" />
             </Grid>
 
+            <!-- Panic Wallpaper -->
             <Label Text="Panic Wallpaper" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Label Text="Set a safe wallpaper to use with the 'Panic' button in the notification." FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
             
@@ -42,9 +118,40 @@
                 <Button Grid.Column="1" Text="Select File" Clicked="OnSelectPanicFileClicked" />
             </Grid>
             <Entry x:Name="PanicUrlEntry" Placeholder="Or enter fallback URL" />
+
+            <!-- Advanced/Technical Settings -->
+            <Label Text="Advanced Settings" FontSize="18" FontAttributes="Bold" Margin="0,30,0,0"/>
             
+            <!-- AutoStart Section -->
+            <StackLayout x:Name="AutoStartSection" Spacing="10" Margin="0,10,0,0">
+                <Label Text="Application Auto-Start" FontSize="16" FontAttributes="Bold" />
+                <Label Text="Configure automatic startup of the application with system privileges" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                
+                <StackLayout Orientation="Horizontal" Spacing="10">
+                    <CheckBox x:Name="AutoStartEnabledCheckBox" CheckedChanged="OnAutoStartEnabledChanged" />
+                    <Label x:Name="AutoStartLabel" Text="Enable auto-start on system boot" VerticalOptions="Center"/>
+                </StackLayout>
+
+                <StackLayout x:Name="AutoStartOptionsSection" Spacing="10" IsVisible="False">
+                    <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="Check interval (hours):" VerticalOptions="Center"/>
+                        <Entry Grid.Column="1" x:Name="AutoStartIntervalEntry" Keyboard="Numeric" Text="1" Placeholder="1-24 hours"/>
+                    </Grid>
+                    
+                    <Label x:Name="AutoStartStatusLabel" Text="Status: Not configured" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+                    <Label x:Name="AutoStartPlatformLabel" Text="" FontSize="11" TextColor="Gray" />
+                    
+                    <StackLayout Orientation="Horizontal" Spacing="10">
+                        <Button x:Name="TestAutoStartButton" Text="Test Configuration" Clicked="OnTestAutoStartClicked" FontSize="12" />
+                        <Button x:Name="RefreshAutoStartStatusButton" Text="Refresh Status" Clicked="OnRefreshAutoStartStatusClicked" FontSize="12" />
+                    </StackLayout>
+                </StackLayout>
+            </StackLayout>
+            
+            <!-- Save Button -->
             <Button Text="Save Settings" Clicked="OnSaveClicked" Margin="0,30,0,0"/>
 
+            <!-- Data Management -->
             <Label Text="Data Management" FontSize="18" FontAttributes="Bold" Margin="0,30,0,0"/>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button Grid.Column="0" Text="Export Data" Clicked="OnExportDataClicked" />

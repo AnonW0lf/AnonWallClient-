@@ -1,4 +1,4 @@
-﻿using Android.App;
+using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Util;
@@ -23,6 +23,13 @@ public class BootReceiver : BroadcastReceiver
             try
             {
                 // Check if user has enabled auto-start after boot
+                var autoStartEnabled = Preferences.Get("AutoStartEnabled", false);
+                if (!autoStartEnabled)
+                {
+                    Log.Info("AnonWallClient", "BootReceiver: AutoStart is disabled in settings.");
+                    return;
+                }
+
                 // Only start service if user has configured the app with valid settings
                 var linkId = Preferences.Get("LinkId", string.Empty);
                 if (!string.IsNullOrEmpty(linkId))
@@ -37,6 +44,12 @@ public class BootReceiver : BroadcastReceiver
                     {
                         context.StartService(serviceIntent);
                     }
+
+                    Log.Info("AnonWallClient", "BootReceiver: Service started successfully.");
+                }
+                else
+                {
+                    Log.Info("AnonWallClient", "BootReceiver: No LinkId configured, skipping service start.");
                 }
             }
             catch (Exception ex)

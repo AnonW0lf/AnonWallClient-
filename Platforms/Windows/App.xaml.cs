@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Drawing;
@@ -252,44 +252,54 @@ public partial class App : MauiWinUIApplication
     {
         try
         {
-            // Get panic settings from SettingsService first, fallback to Preferences
-            string? panicPath = null;
+            _logger?.Add("Windows Tray: Panic action triggered from system tray.");
             
             if (MauiProgram.Services is not null)
             {
-                var settingsService = MauiProgram.Services.GetService<SettingsService>();
-                if (settingsService != null)
+                var panicService = MauiProgram.Services.GetService<PanicService>();
+                if (panicService != null)
                 {
-                    panicPath = settingsService.GetPanicFilePath();
-                    if (string.IsNullOrEmpty(panicPath))
-                        panicPath = settingsService.GetPanicUrl();
+                    var success = await panicService.ExecutePanicAsync();
+                    if (success)
+                    {
+                        _logger?.Add("Windows Tray: Panic wallpaper set successfully.");
+                    }
+                    else
+                    {
+                        _logger?.Add("Windows Tray: Failed to set panic wallpaper.");
+                    }
+                }
+                else
+                {
+                    // Fallback to old method if service not available
+                    var settingsService = MauiProgram.Services.GetService<SettingsService>();
+                    if (settingsService != null)
+                    {
+                        var panicPath = settingsService.GetPanicFilePath();
+                        if (string.IsNullOrEmpty(panicPath))
+                            panicPath = settingsService.GetPanicUrl();
+
+                        if (!string.IsNullOrEmpty(panicPath))
+                        {
+                            var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
+                            if (wallpaperService != null)
+                            {
+                                // Wait for wallpaper to be set before continuing
+                                await wallpaperService.SetWallpaperAsync(panicPath);
+                                _logger?.Add("Windows Tray: Fallback panic wallpaper set.");
+                            }
+                        }
+                    }
                 }
             }
             
-            // Fallback to Preferences if SettingsService is not available
-            if (string.IsNullOrEmpty(panicPath))
-            {
-                panicPath = Preferences.Get("panic_file_path", string.Empty);
-                if (string.IsNullOrEmpty(panicPath))
-                    panicPath = Preferences.Get("panic_url", string.Empty);
-            }
-
-            if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
-            {
-                var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
-                if (wallpaperService != null)
-                {
-                    // Wait for wallpaper to be set before exiting
-                    await wallpaperService.SetWallpaperAsync(panicPath);
-                }
-            }
+            _logger?.Add("Windows Tray: Panic action completed. App will remain running.");
+            // Don't exit the app automatically - let user decide
         }
         catch (Exception ex)
         {
-            _logger?.Add($"Panic action failed: {ex.Message}");
+            _logger?.Add($"Windows Tray: Panic action failed: {ex.Message}");
         }
-        
-        ExitApplication();
     }
 
     private void ExitApplication()

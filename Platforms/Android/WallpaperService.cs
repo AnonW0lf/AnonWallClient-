@@ -1,4 +1,4 @@
-﻿using Android.App;
+using Android.App;
 using Android.Graphics;
 using AnonWallClient.Services;
 using System.IO;
@@ -14,18 +14,30 @@ public class WallpaperService : IWallpaperService
     private readonly AppLogService _logger;
     private readonly WallpaperHistoryService _historyService;
     private readonly SettingsService _settingsService;
+    private readonly ImageCacheService _cacheService;
 
-    public WallpaperService(IHttpClientFactory httpClientFactory, AppLogService logger, WallpaperHistoryService historyService, SettingsService settingsService)
+    public WallpaperService(IHttpClientFactory httpClientFactory, AppLogService logger, WallpaperHistoryService historyService, SettingsService settingsService, ImageCacheService cacheService)
     {
         _httpClient = httpClientFactory.CreateClient("WalltakerClient");
         _logger = logger;
         _historyService = historyService;
         _settingsService = settingsService;
+        _cacheService = cacheService;
     }
 
     public async Task<bool> SetWallpaperAsync(string imagePathOrUrl)
     {
-        _logger.Add("Android Service: SetWallpaperAsync called.");
+        return await SetWallpaperAsync(imagePathOrUrl, _settingsService.GetWallpaperFitMode());
+    }
+
+    public async Task<bool> SetWallpaperAsync(string imagePathOrUrl, WallpaperFitMode fitMode)
+    {
+        return await SetWallpaperAsync(imagePathOrUrl, fitMode, WallpaperType.Wallpaper);
+    }
+
+    public async Task<bool> SetWallpaperAsync(string imagePathOrUrl, WallpaperFitMode fitMode, WallpaperType wallpaperType)
+    {
+        _logger.Add($"Android Service: SetWallpaperAsync called for {wallpaperType}.");
         try
         {
             var wallpaperManager = WallpaperManager.GetInstance(global::Android.App.Application.Context);
@@ -37,40 +49,80 @@ public class WallpaperService : IWallpaperService
             _logger.Add("Android Service: Got WallpaperManager instance.");
 
             Stream imageStream;
+            string? localPath = null;
+
             // Check if the input is a web URL or a local file path
             if (Uri.IsWellFormedUriString(imagePathOrUrl, UriKind.Absolute))
             {
-                _logger.Add("Android Service: Path is a URL, downloading...");
-                var response = await _httpClient.GetAsync(imagePathOrUrl);
-                if (!response.IsSuccessStatusCode)
+                _logger.Add("Android Service: Path is a URL, checking cache...");
+                
+                // Try to get from cache first
+                localPath = await _cacheService.GetCachedImagePathAsync(imagePathOrUrl);
+                
+                if (localPath != null)
                 {
-                    _logger.Add($"Failed to download image. Status: {response.StatusCode}");
-                    return false;
+                    _logger.Add("Android Service: Using cached image");
+                    imageStream = new FileStream(localPath, FileMode.Open, FileAccess.Read);
                 }
-                imageStream = await response.Content.ReadAsStreamAsync();
+                else
+                {
+                    _logger.Add("Android Service: Downloading image...");
+                    var response = await _httpClient.GetAsync(imagePathOrUrl);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.Add($"Failed to download image. Status: {response.StatusCode}");
+                        return false;
+                    }
+
+                    var imageData = await response.Content.ReadAsByteArrayAsync();
+                    
+                    // Cache the image for future use
+                    localPath = await _cacheService.CacheImageAsync(imagePathOrUrl, imageData);
+                    
+                    imageStream = new MemoryStream(imageData);
+                }
             }
             else
             {
                 _logger.Add("Android Service: Path is a local file, opening stream...");
-                // It's a local file path, open a stream to it
                 imageStream = new FileStream(imagePathOrUrl, FileMode.Open, FileAccess.Read);
+                localPath = imagePathOrUrl;
             }
 
             _logger.Add("Android Service: Decoding stream to bitmap...");
-            using var bitmap = await BitmapFactory.DecodeStreamAsync(imageStream);
-            await imageStream.DisposeAsync(); // Clean up the stream
+            using var originalBitmap = await BitmapFactory.DecodeStreamAsync(imageStream);
+            await imageStream.DisposeAsync();
 
-            if (bitmap != null)
+            if (originalBitmap != null)
             {
-                _logger.Add($"Android Service: Bitmap decoded successfully. Size: {bitmap.Width}x{bitmap.Height}");
-                _logger.Add("Android Service: Calling native SetBitmap...");
+                _logger.Add($"Android Service: Bitmap decoded successfully. Size: {originalBitmap.Width}x{originalBitmap.Height}");
+                
+                // Apply fit mode if needed
+                var processedBitmap = ApplyFitMode(originalBitmap, fitMode);
+                
+                _logger.Add($"Android Service: Calling native SetBitmap for {wallpaperType}...");
+                
+                // Set wallpaper based on type
+                var success = await SetWallpaperByTypeAsync(wallpaperManager, processedBitmap, wallpaperType);
 
-                wallpaperManager.SetBitmap(bitmap);
+                // Clean up processed bitmap if different from original
+                if (processedBitmap != originalBitmap)
+                {
+                    processedBitmap?.Dispose();
+                }
 
-                _logger.Add("Android Service: Native SetBitmap call completed.");
-                await MainThread.InvokeOnMainThreadAsync(() => Toast.Make("New wallpaper set!", ToastDuration.Short).Show());
-                await AddToHistory(imagePathOrUrl);
-                return true;
+                if (success)
+                {
+                    _logger.Add($"Android Service: Native SetBitmap call completed for {wallpaperType}.");
+                    await MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"New {wallpaperType.ToString().ToLower()} set!", ToastDuration.Short).Show());
+                    await AddToHistory(imagePathOrUrl, wallpaperType);
+                    return true;
+                }
+                else
+                {
+                    _logger.Add($"Android Service ERROR: Failed to set {wallpaperType}.");
+                    return false;
+                }
             }
             else
             {
@@ -85,11 +137,158 @@ public class WallpaperService : IWallpaperService
         }
     }
 
-    private async Task AddToHistory(string imageUrl)
+    private async Task<bool> SetWallpaperByTypeAsync(WallpaperManager wallpaperManager, Bitmap bitmap, WallpaperType wallpaperType)
     {
-        // Fetch extra info from Walltaker API
-        var linkId = _settingsService.GetLinkId();
+        try
+        {
+            if (wallpaperType == WallpaperType.Lockscreen)
+            {
+                // Set lockscreen wallpaper only (Android 7.0+)
+                if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.N)
+                {
+                    wallpaperManager.SetBitmap(bitmap, null, true, WallpaperManagerFlags.Lock);
+                    return true;
+                }
+                else
+                {
+                    _logger.Add("Android Service: Lockscreen wallpaper not supported on this Android version. Setting system wallpaper instead.");
+                    wallpaperManager.SetBitmap(bitmap);
+                    return true;
+                }
+            }
+            else
+            {
+                // Set home screen wallpaper only (Android 7.0+) or system wallpaper (older versions)
+                if (global::Android.OS.Build.VERSION.SdkInt >= global::Android.OS.BuildVersionCodes.N)
+                {
+                    wallpaperManager.SetBitmap(bitmap, null, true, WallpaperManagerFlags.System);
+                }
+                else
+                {
+                    wallpaperManager.SetBitmap(bitmap);
+                }
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Add($"Android Service ERROR setting {wallpaperType}: {ex.Message}");
+            return false;
+        }
+    }
+
+    private Bitmap ApplyFitMode(Bitmap originalBitmap, WallpaperFitMode fitMode)
+    {
+        try
+        {
+            // Get screen dimensions
+            var context = global::Android.App.Application.Context;
+            var windowManager = context?.GetSystemService(global::Android.Content.Context.WindowService) as global::Android.Views.IWindowManager;
+            var display = windowManager?.DefaultDisplay;
+            
+            if (display == null)
+            {
+                _logger.Add("Android Service: Could not get display info, using original bitmap");
+                return originalBitmap;
+            }
+
+            var screenWidth = display.Width;
+            var screenHeight = display.Height;
+
+            _logger.Add($"Android Service: Screen size: {screenWidth}x{screenHeight}, Fit mode: {fitMode}");
+
+            return fitMode switch
+            {
+                WallpaperFitMode.Fill or WallpaperFitMode.Stretch => 
+                    Bitmap.CreateScaledBitmap(originalBitmap, screenWidth, screenHeight, true),
+                
+                WallpaperFitMode.Fit => CreateFitBitmap(originalBitmap, screenWidth, screenHeight),
+                
+                WallpaperFitMode.Center => CreateCenterBitmap(originalBitmap, screenWidth, screenHeight),
+                
+                WallpaperFitMode.Tile => CreateTileBitmap(originalBitmap, screenWidth, screenHeight),
+                
+                _ => originalBitmap
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.Add($"Android Service: Error applying fit mode: {ex.Message}");
+            return originalBitmap;
+        }
+    }
+
+    private Bitmap CreateFitBitmap(Bitmap originalBitmap, int screenWidth, int screenHeight)
+    {
+        var originalWidth = originalBitmap.Width;
+        var originalHeight = originalBitmap.Height;
+        
+        // Calculate scale to fit within screen while maintaining aspect ratio
+        var scaleX = (float)screenWidth / originalWidth;
+        var scaleY = (float)screenHeight / originalHeight;
+        var scale = Math.Min(scaleX, scaleY);
+        
+        var newWidth = (int)(originalWidth * scale);
+        var newHeight = (int)(originalHeight * scale);
+        
+        // Create a black background
+        var resultBitmap = Bitmap.CreateBitmap(screenWidth, screenHeight, Bitmap.Config.Argb8888!)!;
+        var canvas = new Canvas(resultBitmap);
+        canvas.DrawColor(global::Android.Graphics.Color.Black);
+        
+        // Scale and center the image
+        var scaledBitmap = Bitmap.CreateScaledBitmap(originalBitmap, newWidth, newHeight, true);
+        var x = (screenWidth - newWidth) / 2;
+        var y = (screenHeight - newHeight) / 2;
+        canvas.DrawBitmap(scaledBitmap, x, y, null);
+        
+        scaledBitmap?.Dispose();
+        return resultBitmap;
+    }
+
+    private Bitmap CreateCenterBitmap(Bitmap originalBitmap, int screenWidth, int screenHeight)
+    {
+        var resultBitmap = Bitmap.CreateBitmap(screenWidth, screenHeight, Bitmap.Config.Argb8888!)!;
+        var canvas = new Canvas(resultBitmap);
+        canvas.DrawColor(global::Android.Graphics.Color.Black);
+        
+        // Center the image at original size
+        var x = (screenWidth - originalBitmap.Width) / 2;
+        var y = (screenHeight - originalBitmap.Height) / 2;
+        canvas.DrawBitmap(originalBitmap, x, y, null);
+        
+        return resultBitmap;
+    }
+
+    private Bitmap CreateTileBitmap(Bitmap originalBitmap, int screenWidth, int screenHeight)
+    {
+        var resultBitmap = Bitmap.CreateBitmap(screenWidth, screenHeight, Bitmap.Config.Argb8888!)!;
+        var canvas = new Canvas(resultBitmap);
+        
+        var tileWidth = originalBitmap.Width;
+        var tileHeight = originalBitmap.Height;
+        
+        // Tile the image across the screen
+        for (int x = 0; x < screenWidth; x += tileWidth)
+        {
+            for (int y = 0; y < screenHeight; y += tileHeight)
+            {
+                canvas.DrawBitmap(originalBitmap, x, y, null);
+            }
+        }
+        
+        return resultBitmap;
+    }
+
+    private async Task AddToHistory(string imageUrl, WallpaperType wallpaperType)
+    {
+        // Determine which LinkId to use based on wallpaper type
+        var linkId = wallpaperType == WallpaperType.Lockscreen 
+            ? _settingsService.GetLockscreenLinkId() 
+            : _settingsService.GetWallpaperLinkId();
+
         if (string.IsNullOrWhiteSpace(linkId)) return;
+        
         try
         {
             var apiUrl = $"https://walltaker.joi.how/api/links/{linkId}.json";
@@ -113,7 +312,7 @@ public class WallpaperService : IWallpaperService
                 var responseText = root.TryGetProperty("response_text", out var respTextProp) ? respTextProp.GetString() : null;
                 
                 // Create description as specified: "Set By: {{set_by}} - Post Description: {{post_description}}"
-                var desc = $"Set By: {setBy ?? "Unknown"} - Post Description: {description ?? "No description available"}";
+                var desc = $"Set By: {setBy ?? "Unknown"} - Post Description: {description ?? "No description available"} ({wallpaperType})";
                 
                 // Create notes as specified: "{{id}} - {{response_type}} - {{response_text}}"
                 var notes = $"{id}";
@@ -135,7 +334,8 @@ public class WallpaperService : IWallpaperService
                     Nsfw = true, // As specified
                     Blacklisted = !string.IsNullOrEmpty(blacklist), // Convert blacklist string to boolean
                     Favorite = null, // Not provided by Walltaker API
-                    Notes = notes
+                    Notes = notes,
+                    WallpaperType = wallpaperType
                 });
             }
         }

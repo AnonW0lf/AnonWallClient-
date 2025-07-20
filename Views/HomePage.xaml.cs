@@ -12,7 +12,7 @@ public partial class HomePage : ContentPage
     private readonly AppLogService _logger;
     private readonly PollingService _pollingService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly WallpaperHistoryService _historyService;
+    private readonly WallpaperHistoryService? _historyService;
     private readonly SettingsService _settingsService;
     private bool _isServiceStarted = false;
 
@@ -23,7 +23,7 @@ public partial class HomePage : ContentPage
         _pollingService = pollingService;
         _serviceProvider = serviceProvider;
         _settingsService = settingsService;
-        _historyService = MauiProgram.Services?.GetService<WallpaperHistoryService>()!;
+        _historyService = MauiProgram.Services?.GetService<WallpaperHistoryService>();
 
         _logger.Logs.CollectionChanged += OnLogsCollectionChanged;
         
@@ -70,18 +70,75 @@ public partial class HomePage : ContentPage
     {
         try
         {
-            var current = _historyService?.History?.FirstOrDefault();
-            if (current != null)
+            var wallpaperManagement = MauiProgram.Services?.GetService<WallpaperManagementService>();
+            if (wallpaperManagement != null)
             {
-                CurrentWallpaperImage.Source = current.ThumbnailUrl ?? current.ImageUrl;
-                CurrentWallpaperDescription.Text = current.Description ?? "No description";
-                CurrentWallpaperSetTime.Text = $"Set: {current.SetTime:g}";
+                var (currentWallpaper, currentLockscreen) = wallpaperManagement.GetCurrentWallpapers();
+                
+                if (currentWallpaper != null)
+                {
+                    // Show wallpaper thumbnail as primary
+                    CurrentWallpaperImage.Source = currentWallpaper.ThumbnailUrl ?? currentWallpaper.ImageUrl;
+                    
+                    // Enhanced description showing both wallpaper types if applicable
+                    var description = currentWallpaper.Description ?? "No description";
+                    var setTime = $"Set: {currentWallpaper.SetTime:g}";
+                    
+                    if (currentLockscreen != null && 
+                        currentLockscreen.ImageUrl != currentWallpaper.ImageUrl)
+                    {
+                        // Different wallpapers for desktop and lockscreen - show combined info
+                        CurrentWallpaperDescription.Text = $"🖥️ Desktop: {description}";
+                        CurrentWallpaperSetTime.Text = $"{setTime}\n🔒 Lockscreen: {currentLockscreen.Description ?? "No description"} (Set: {currentLockscreen.SetTime:g})";
+                        
+                        // Create a composite image showing both thumbnails side by side
+                        // For now, we'll use the desktop wallpaper as primary with indication that lockscreen differs
+                    }
+                    else if (currentLockscreen != null)
+                    {
+                        // Same wallpaper for both desktop and lockscreen
+                        CurrentWallpaperDescription.Text = $"🖥️🔒 Both: {description}";
+                        CurrentWallpaperSetTime.Text = setTime;
+                    }
+                    else
+                    {
+                        // Only desktop wallpaper
+                        CurrentWallpaperDescription.Text = $"🖥️ Desktop: {description}";
+                        CurrentWallpaperSetTime.Text = setTime;
+                    }
+                }
+                else if (currentLockscreen != null)
+                {
+                    // Only lockscreen set
+                    CurrentWallpaperImage.Source = currentLockscreen.ThumbnailUrl ?? currentLockscreen.ImageUrl;
+                    CurrentWallpaperDescription.Text = $"🔒 Lockscreen only: {currentLockscreen.Description ?? "No description"}";
+                    CurrentWallpaperSetTime.Text = $"Set: {currentLockscreen.SetTime:g}";
+                }
+                else
+                {
+                    // No wallpapers set
+                    CurrentWallpaperImage.Source = null;
+                    CurrentWallpaperDescription.Text = "No wallpaper set yet.";
+                    CurrentWallpaperSetTime.Text = string.Empty;
+                }
             }
             else
             {
-                CurrentWallpaperImage.Source = null;
-                CurrentWallpaperDescription.Text = "No wallpaper set yet.";
-                CurrentWallpaperSetTime.Text = string.Empty;
+                // Fallback to old method if service not available
+                var current = _historyService?.History?.FirstOrDefault();
+                if (current != null)
+                {
+                    CurrentWallpaperImage.Source = current.ThumbnailUrl ?? current.ImageUrl;
+                    var typeText = current.WallpaperType == WallpaperType.Lockscreen ? "🔒 Lockscreen" : "🖥️ Desktop";
+                    CurrentWallpaperDescription.Text = $"{typeText}: {current.Description ?? "No description"}";
+                    CurrentWallpaperSetTime.Text = $"Set: {current.SetTime:g}";
+                }
+                else
+                {
+                    CurrentWallpaperImage.Source = null;
+                    CurrentWallpaperDescription.Text = "No wallpaper set yet.";
+                    CurrentWallpaperSetTime.Text = string.Empty;
+                }
             }
         }
         catch (Exception ex)
@@ -115,6 +172,9 @@ public partial class HomePage : ContentPage
         }
         
         LoadCurrentWallpaperInfo();
+        
+        // Show restore button only on Windows if we have backups
+        ConfigureRestoreButton();
 
         if (!_isServiceStarted)
         {
@@ -155,6 +215,67 @@ public partial class HomePage : ContentPage
         }
     }
 
+    private void ConfigureRestoreButton()
+    {
+#if WINDOWS
+        // Check if we have any backup stored for Windows lockscreen
+        try
+        {
+            var hasBackup = Preferences.Get("OriginalLockScreenImagePath", string.Empty) != string.Empty ||
+                           Preferences.Get("OriginalLockScreenImageUrl", string.Empty) != string.Empty ||
+                           Preferences.Get("OriginalLockScreenImageStatus", -1) != -1;
+            
+            RestoreButton.IsVisible = hasBackup;
+            
+            if (hasBackup)
+            {
+                _logger.Add("HomePage: Restore button enabled - lockscreen backup detected.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Add($"HomePage: Error checking restore availability: {ex.Message}");
+        }
+#else
+        // Hide restore button on non-Windows platforms
+        RestoreButton.IsVisible = false;
+#endif
+    }
+
+    private async void OnRestoreClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            _logger.Add("HomePage: Restore button clicked.");
+            
+            var panicService = MauiProgram.Services?.GetService<PanicService>();
+            if (panicService != null)
+            {
+                var success = await panicService.RestoreOriginalWallpapersAsync();
+                if (success)
+                {
+                    await ShowToastOrAlertAsync("Original wallpapers restored successfully!");
+                    
+                    // Hide restore button after successful restore
+                    RestoreButton.IsVisible = false;
+                }
+                else
+                {
+                    await ShowToastOrAlertAsync("Failed to restore original wallpapers. Check logs for details.", true);
+                }
+            }
+            else
+            {
+                await ShowToastOrAlertAsync("Restore service not available.", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Add($"HomePage: Restore error: {ex.Message}");
+            await DisplayAlert("Restore Error", $"{ex.Message}", "OK");
+        }
+    }
+
     private void OnLogsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         try
@@ -174,8 +295,19 @@ public partial class HomePage : ContentPage
     {
         try
         {
-            await Clipboard.SetTextAsync(LogEditor.Text);
-            await ShowToastOrAlertAsync("Log copied to clipboard.");
+            // First try to get full log file content
+            var fullLog = await _logger.ExportLogsAsync();
+            if (!string.IsNullOrEmpty(fullLog))
+            {
+                await Clipboard.SetTextAsync(fullLog);
+                await ShowToastOrAlertAsync("Full log file copied to clipboard.");
+            }
+            else
+            {
+                // Fallback to UI logs
+                await Clipboard.SetTextAsync(LogEditor.Text);
+                await ShowToastOrAlertAsync("UI log copied to clipboard.");
+            }
         }
         catch (Exception ex)
         {
@@ -183,26 +315,65 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private void OnPanicClicked(object sender, EventArgs e)
+    private async void OnPanicClicked(object sender, EventArgs e)
     {
         try
         {
             _logger.Add("UI Panic button clicked.");
-            var panicPath = _settingsService.GetPanicFilePath();
-            if (string.IsNullOrEmpty(panicPath)) 
-                panicPath = _settingsService.GetPanicUrl();
-
-            if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
+            
+            var panicService = MauiProgram.Services?.GetService<PanicService>();
+            if (panicService != null)
             {
-                var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
-                try { _ = wallpaperService?.SetWallpaperAsync(panicPath); } catch { }
+                var success = await panicService.ExecutePanicAsync();
+                if (success)
+                {
+                    await ShowToastOrAlertAsync("Panic wallpaper set successfully!");
+                }
+                else
+                {
+                    await ShowToastOrAlertAsync("Failed to set panic wallpaper. Check logs for details.", true);
+                }
             }
-            OnExitClicked(sender, e);
+            else
+            {
+                // Fallback to old method if service not available
+                var panicPath = _settingsService.GetPanicFilePath();
+                if (string.IsNullOrEmpty(panicPath)) 
+                    panicPath = _settingsService.GetPanicUrl();
+
+                if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
+                {
+                    var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
+                    try 
+                    { 
+                        var success = await wallpaperService?.SetWallpaperAsync(panicPath)!;
+                        if (success)
+                        {
+                            await ShowToastOrAlertAsync("Panic wallpaper set!");
+                        }
+                        else
+                        {
+                            await ShowToastOrAlertAsync("Failed to set panic wallpaper.", true);
+                        }
+                    } 
+                    catch (Exception ex)
+                    {
+                        _logger.Add($"Fallback panic error: {ex.Message}");
+                        await ShowToastOrAlertAsync($"Panic error: {ex.Message}", true);
+                    }
+                }
+                else
+                {
+                    await ShowToastOrAlertAsync("No panic wallpaper configured.", true);
+                }
+            }
+            
+            // Don't auto-exit on panic - let user decide
         }
         catch (Exception ex)
         {
             _logger.Add($"Panic error: {ex.Message}");
-            DisplayAlert("Panic Error", $"{ex.Message}", "OK");
+            await DisplayAlert("Panic Error", $"{ex.Message}", "OK");
         }
     }
 
@@ -324,10 +495,28 @@ public partial class HomePage : ContentPage
                 // Clear the text field after successful response
                 ResponseTextEntry.Text = string.Empty;
                 
-                // If it's a disgust response, suggest re-polling for wallpaper rollback
+                // Handle disgust response - rollback wallpaper
                 if (responseType == "disgust")
                 {
-                    _logger.Add("Disgust response sent - wallpaper should be rolled back on next poll.");
+                    _logger.Add("Disgust response sent - attempting to rollback wallpaper...");
+                    
+                    var wallpaperManagement = MauiProgram.Services?.GetService<WallpaperManagementService>();
+                    if (wallpaperManagement != null)
+                    {
+                        // Try to rollback both wallpaper types
+                        var wallpaperRollback = await wallpaperManagement.RollbackToPreviousWallpaperAsync(WallpaperType.Wallpaper);
+                        var lockscreenRollback = await wallpaperManagement.RollbackToPreviousWallpaperAsync(WallpaperType.Lockscreen);
+                        
+                        if (wallpaperRollback || lockscreenRollback)
+                        {
+                            await ShowToastOrAlertAsync("Wallpaper rolled back to previous image.");
+                            LoadCurrentWallpaperInfo(); // Refresh the display
+                        }
+                        else
+                        {
+                            _logger.Add("Could not rollback wallpaper - insufficient history or rollback failed.");
+                        }
+                    }
                 }
             }
             else

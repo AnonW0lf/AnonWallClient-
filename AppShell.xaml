@@ -6,16 +6,17 @@
     xmlns:views="clr-namespace:AnonWallClient.Views"
     Shell.FlyoutBehavior="Disabled">
 
-    <TabBar>
-        <Tab Title="Home" Icon="home.png">
-            <!-- <ShellContent ContentTemplate="{DataTemplate views:HomePage}" /> -->
+    <TabBar x:Name="MainTabBar">
+        <Tab Title="Home">
             <ShellContent ContentTemplate="{DataTemplate views:HomePage}" Route="HomePage" />
         </Tab>
-        <Tab Title="History" Icon="history.png">
+        <Tab Title="History">
             <ShellContent ContentTemplate="{DataTemplate views:HistoryPage}" Route="HistoryPage" />
         </Tab>
-        <Tab Title="Settings" Icon="settings.png">
-           <!-- <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" /> -->
+        <Tab x:Name="ProfileTab" Title="Profile" IsVisible="False">
+            <ShellContent ContentTemplate="{DataTemplate views:ProfilePage}" Route="ProfilePage" />
+        </Tab>
+        <Tab Title="Settings">
             <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" Route="SettingsPage" />
         </Tab>
     </TabBar>

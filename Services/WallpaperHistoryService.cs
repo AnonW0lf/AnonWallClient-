@@ -21,6 +21,9 @@ public class WallpaperHistoryItem
     public bool? Blacklisted { get; set; }
     public bool? Favorite { get; set; }
     public string? Notes { get; set; }
+    
+    // New field for wallpaper type
+    public WallpaperType WallpaperType { get; set; } = WallpaperType.Wallpaper;
 }
 
 public class WallpaperHistoryService
@@ -57,8 +60,8 @@ public class WallpaperHistoryService
             return;
         }
         
-        // Check for duplicates based on ImageUrl to prevent duplicate entries
-        var existingItem = _history.FirstOrDefault(h => h.ImageUrl == item.ImageUrl);
+        // Check for duplicates based on ImageUrl and WallpaperType to prevent duplicate entries
+        var existingItem = _history.FirstOrDefault(h => h.ImageUrl == item.ImageUrl && h.WallpaperType == item.WallpaperType);
         if (existingItem != null)
         {
             // If the item already exists, update it instead of adding a duplicate
@@ -89,6 +92,15 @@ public class WallpaperHistoryService
         
         // Notify subscribers that history was cleared
         HistoryCleared?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void RemoveWallpaper(WallpaperHistoryItem item)
+    {
+        if (_history.Remove(item))
+        {
+            Save();
+            // Note: Could add a WallpaperRemoved event if needed
+        }
     }
 
     public void Save()
@@ -125,13 +137,14 @@ public class WallpaperHistoryService
 
     private void RemoveDuplicates()
     {
-        // Remove duplicates based on ImageUrl, keeping the first occurrence (most recent)
+        // Remove duplicates based on ImageUrl and WallpaperType, keeping the first occurrence (most recent)
         var seen = new HashSet<string>();
         var deduplicated = new List<WallpaperHistoryItem>();
         
         foreach (var item in _history)
         {
-            if (!string.IsNullOrEmpty(item.ImageUrl) && seen.Add(item.ImageUrl))
+            var key = $"{item.ImageUrl}|{item.WallpaperType}";
+            if (!string.IsNullOrEmpty(item.ImageUrl) && seen.Add(key))
             {
                 deduplicated.Add(item);
             }
@@ -166,5 +179,16 @@ public class WallpaperHistoryService
             _history = _history.Take(maxHistory).ToList();
             Save();
         }
+    }
+
+    // Helper methods to get history filtered by type
+    public IReadOnlyList<WallpaperHistoryItem> GetWallpaperHistory()
+    {
+        return _history.Where(h => h.WallpaperType == WallpaperType.Wallpaper).ToList();
+    }
+
+    public IReadOnlyList<WallpaperHistoryItem> GetLockscreenHistory()
+    {
+        return _history.Where(h => h.WallpaperType == WallpaperType.Lockscreen).ToList();
     }
 }
