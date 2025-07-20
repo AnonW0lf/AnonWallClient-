@@ -6,23 +6,12 @@ A modern, cross-platform client for [Walltaker](https://github.com/PawCorp/wallt
 ![.NET Version](https://img.shields.io/badge/.NET-8.0-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange)
-![Build Status](https://github.com/yourusername/AnonWallClient/workflows/Continuous%20Integration/badge.svg)
-![Release](https://github.com/yourusername/AnonWallClient/workflows/Build%20and%20Release%20AnonWallClient/badge.svg)
 
-## ?? Overview
+## 🎯 Overview
 
 AnonWallClient is a feature-rich, cross-platform desktop and mobile application that integrates with the Walltaker API to automatically manage wallpapers. It provides a seamless experience across Windows, Android, iOS, and macOS platforms with persistent settings, wallpaper history, and advanced polling options.
 
-> **?? Stable Release**: This version includes comprehensive CI/CD automation and is ready for production use.
-
-## ?? Quick Start
-
-### Download Latest Release
-Visit the [Releases](https://github.com/yourusername/AnonWallClient/releases) page to download the latest version for your platform:
-- **Android**: APK file
-- **Windows**: Self-contained ZIP
-- **macOS**: .app bundle in ZIP
-- **iOS**: Build artifacts (requires development provisioning)
+## 🚀 Quick Start
 
 ### Build from Source
 ```bash
@@ -30,48 +19,44 @@ Visit the [Releases](https://github.com/yourusername/AnonWallClient/releases) pa
 git clone https://github.com/yourusername/AnonWallClient.git
 cd AnonWallClient
 
-# Quick build using provided scripts
-./build.sh all Release          # Linux/macOS
-.\build.ps1 all Release         # Windows PowerShell
-
-# Or use .NET CLI directly
+# Use .NET CLI directly
 dotnet restore
 dotnet build -c Release
 ```
 
-## ? Features
+## ✨ Features
 
-### ?? Core Functionality
+### 🎯 Core Functionality
 - **Automatic Wallpaper Polling** - Continuously checks for new wallpapers from Walltaker API
 - **Cross-Platform Support** - Native apps for Windows, Android, iOS, and macOS
 - **Background Service** - Keeps running in the background with foreground notifications
 - **Persistent Settings** - JSON-based settings that survive app uninstalls
 
-### ??? Wallpaper Management  
+### 🖼️ Wallpaper Management  
 - **Real-time Updates** - Automatic wallpaper setting when new content is available
 - **Wallpaper History** - View and manage your last 20 wallpapers with thumbnails
 - **Save Wallpapers** - Download and save any wallpaper from history to device storage
 - **Current Wallpaper Display** - See details about your currently set wallpaper
 
-### ?? Advanced Configuration
+### ⚙️ Advanced Configuration
 - **Polling Interval Control** - Customize check frequency (5 seconds to 5 minutes)
 - **Wi-Fi Only Mode** - Restrict API calls to Wi-Fi connections only for data saving
-- **Configurable History Limit** - Set maximum wallpapers to keep in history (0-?, 0 disables history)
+- **Configurable History Limit** - Set maximum wallpapers to keep in history (0-∞, 0 disables history)
 - **Panic Wallpaper** - Quick-access safe wallpaper for emergency situations
 - **Data Export/Import** - Backup and restore settings and history
 
-### ?? Platform-Specific Features
+### 📱 Platform-Specific Features
 - **Android**: Foreground service with notification controls, boot receiver for auto-start
 - **Windows**: System tray integration with context menu and panic button
 - **iOS/macOS**: Native integration with platform UI patterns
 - **Cross-Platform**: Responsive UI that adapts to different screen sizes
 
-### ?? Interactive Features
+### 🎮 Interactive Features
 - **Wallpaper Responses** - Rate wallpapers with custom response types and text
 - **History Management** - Reset history, view detailed wallpaper information
 - **Real-time UI Updates** - Automatic refresh when wallpapers are added or removed
 
-## ??? Development & Deployment
+## 🏗️ Development
 
 ### Prerequisites
 - .NET 8.0 SDK
@@ -95,60 +80,19 @@ dotnet build -f net8.0-maccatalyst       # macOS (macOS only)
 dotnet run -f net8.0-windows10.0.19041.0  # Windows
 ```
 
-### Build Scripts
-Convenient build scripts are provided for easy compilation:
-
+### Building Releases
 ```bash
-# Bash (Linux/macOS)
-./build.sh android Release     # Build Android APK
-./build.sh windows Release     # Build Windows app
-./build.sh all Debug          # Build all platforms (Debug)
+# Debug build
+dotnet build
 
-# PowerShell (Windows)
-.\build.ps1 android Release    # Build Android APK
-.\build.ps1 windows Release    # Build Windows app
-.\build.ps1 all Debug         # Build all platforms (Debug)
+# Release build  
+dotnet build -c Release
+
+# Platform-specific release
+dotnet publish -f net8.0-android -c Release
 ```
 
-### Automated CI/CD
-
-This project includes comprehensive GitHub Actions workflows:
-
-#### ?? Continuous Integration (`ci.yml`)
-- **Triggers**: Push/PR to `main` or `develop` branches
-- **Features**: Multi-platform builds, code quality checks, security scans
-- **Platforms**: Tests all target frameworks on appropriate runners
-
-#### ?? Release Pipeline (`release.yml`)
-- **Triggers**: Git tags (`v*.*.*`) or manual dispatch
-- **Artifacts**: APK, Windows ZIP, macOS ZIP, iOS build
-- **Auto-Release**: Creates GitHub releases with downloadable artifacts
-
-#### ?? Dependency Management (`dependencies.yml`)
-- **Schedule**: Weekly automatic updates
-- **Features**: NuGet package updates, security patches, automated PRs
-
-### Creating a Release
-
-#### Option 1: Manual Release
-1. Go to **Actions** ? **"Build and Release AnonWallClient"**
-2. Click **"Run workflow"**
-3. Enter version number (e.g., `1.0.1`)
-4. Click **"Run workflow"**
-
-#### Option 2: Tag-based Release
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-The release workflow automatically:
-- Builds for all platforms
-- Creates release artifacts
-- Publishes to GitHub Releases
-- Marks pre-releases (alpha/beta/rc) appropriately
-
-## ??? Configuration
+## 🛠️ Configuration
 
 ### Initial Setup
 1. **Get Walltaker Credentials**
@@ -178,19 +122,18 @@ Settings are stored in `AnonWallClient.settings.json` in the device's Documents 
 }
 ```
 
-## ??? Architecture
+## 🏛️ Architecture
 
 ### Project Structure
 ```
 AnonWallClient/
-??? Background/           # Background services and polling logic
-??? Platforms/           # Platform-specific implementations
-?   ??? Android/        # Android-specific services and permissions
-?   ??? Windows/        # Windows-specific features (system tray)
-??? Services/           # Core business logic and API integration
-??? Views/              # UI pages and user interface
-??? Resources/          # Images, styles, and assets
-??? .github/workflows/  # CI/CD automation
+├── Background/           # Background services and polling logic
+├── Platforms/           # Platform-specific implementations
+│   ├── Android/        # Android-specific services and permissions
+│   └── Windows/        # Windows-specific features (system tray)
+├── Services/           # Core business logic and API integration
+├── Views/              # UI pages and user interface
+└── Resources/          # Images, styles, and assets
 ```
 
 ### Key Components
@@ -206,7 +149,7 @@ AnonWallClient/
 - **Microsoft.Extensions.Http** 8.0.0 - HTTP client factory and services
 - **H.NotifyIcon.Maui** 2.1.0 - Windows system tray support
 
-## ?? Platform Details
+## 📱 Platform Details
 
 ### Android Requirements
 - Android 5.0+ (API level 21)
@@ -224,7 +167,7 @@ AnonWallClient/
 - macOS 10.13 or later
 - Catalyst framework for native macOS experience
 
-## ?? Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -232,33 +175,25 @@ AnonWallClient/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-### Development Guidelines
-- All commits trigger CI builds
-- PRs require passing builds on all platforms
-- Security scans and code quality checks must pass
-- Follow conventional commit messages for automated changelog generation
-
-## ?? License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## ?? Related Projects
+## 🔗 Related Projects
 
 - [Walltaker](https://github.com/PawCorp/walltaker) - The main Walltaker server and web interface
 - [Walltaker API Documentation](https://walltaker.joi.how/help/client_guide) - API reference for client developers
 
-## ?? Support
+## 💬 Support
 
 - **Issues**: Report bugs and request features via [GitHub Issues](https://github.com/yourusername/AnonWallClient/issues)
 - **Discussions**: Community discussions via [GitHub Discussions](https://github.com/yourusername/AnonWallClient/discussions)
-- **Releases**: Download the latest versions from [GitHub Releases](https://github.com/yourusername/AnonWallClient/releases)
 - **Walltaker Community**: Join the main Walltaker community for general support
 
-## ?? Acknowledgments
+## 🏆 Acknowledgments
 
 - Thanks to the Walltaker team for creating the platform and API
 - .NET MAUI team for the excellent cross-platform framework
-- GitHub Actions for reliable CI/CD infrastructure
 - Community contributors and testers
 
 ---
