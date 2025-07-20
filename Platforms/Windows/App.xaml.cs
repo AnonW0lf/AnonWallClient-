@@ -1,25 +1,132 @@
-﻿using AnonWallClient.Services;
-using H.NotifyIcon;
-using Microsoft.Extensions.DependencyInjection;
-// Use the MAUI Controls namespace
-using Microsoft.Maui.Controls;
+﻿using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Drawing;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using System.IO;
 using WinRT.Interop;
+using AnonWallClient.Services;
+using Microsoft.Extensions.DependencyInjection;
+
+// Add reference to Windows Script Host Object Model (IWshRuntimeLibrary)
+using System.Reflection;
 
 namespace AnonWallClient.Platforms.Windows;
 
 public partial class App : MauiWinUIApplication
 {
-    private TaskbarIcon? trayIcon;
+    // Win32 constants and structures
+    private const int WM_USER = 0x0400;
+    private const int WM_TRAYICON = WM_USER + 1;
+    private const int NIF_MESSAGE = 0x00000001;
+    private const int NIF_ICON = 0x00000002;
+    private const int NIF_TIP = 0x00000004;
+    private const int NIM_ADD = 0x00000000;
+    private const int NIM_MODIFY = 0x00000001;
+    private const int NIM_DELETE = 0x00000002;
+    private const int WM_RBUTTONUP = 0x0205;
+    private const int WM_LBUTTONUP = 0x0202;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct NOTIFYICONDATA
+    {
+        public int cbSize;
+        public IntPtr hWnd;
+        public int uID;
+        public int uFlags;
+        public int uCallbackMessage;
+        public IntPtr hIcon;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+        public string szTip;
+        public int dwState;
+        public int dwStateMask;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        public string szInfo;
+        public int uTimeoutOrVersion;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)]
+        public string szInfoTitle;
+        public int dwInfoFlags;
+        public Guid guidItem;
+        public IntPtr hBalloonIcon;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool Shell_NotifyIcon(int dwMessage, ref NOTIFYICONDATA lpdata);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr LoadIcon(IntPtr hInstance, IntPtr lpIconName);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr hIcon);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CreatePopupMenu();
+
+    [DllImport("user32.dll")]
+    private static extern int AppendMenu(IntPtr hMenu, uint uFlags, uint uIDNewItem, string lpNewItem);
+
+    [DllImport("user32.dll")]
+    private static extern int TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    private IntPtr _trayMenu;
+    private IntPtr _hIcon;
+    private IntPtr _windowHandle;
+    private readonly int _trayMenuOpenId = 1;
+    private readonly int _trayMenuPanicId = 2;
+    private readonly int _trayMenuExitId = 3;
+    private bool _isMinimizedToTray;
+    private Icon? _icon;
+    private AppLogService? _logger;
 
     public App()
     {
         this.InitializeComponent();
+        EnsureStartMenuShortcut();
     }
+
+    private void EnsureStartMenuShortcut()
+    {
+        try
+        {
+            string shortcutName = "AnonWallClient.lnk";
+            string startMenuPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", shortcutName);
+            if (!File.Exists(startMenuPath))
+            {
+                string exePath = Environment.ProcessPath ?? Assembly.GetExecutingAssembly().Location;
+                Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType != null)
+                {
+                    dynamic shell = Activator.CreateInstance(shellType)!;
+                    var shortcut = shell.CreateShortcut(startMenuPath);
+                    shortcut.TargetPath = exePath;
+                    shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
+                    shortcut.WindowStyle = 1;
+                    shortcut.Description = "AnonWallClient";
+                    shortcut.Save();
+                }
+            }
+            // Set AppUserModelID using Win32 API
+            SetCurrentProcessExplicitAppUserModelID("AnonWallClient");
+        }
+        catch { /* Ignore errors for shortcut creation */ }
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
 
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
@@ -27,56 +134,105 @@ public partial class App : MauiWinUIApplication
     {
         base.OnLaunched(args);
 
-        var nativeWindow = Application.Windows[0].Handler!.PlatformView as Microsoft.UI.Xaml.Window;
+        var nativeWindow = Application.Windows[0].Handler?.PlatformView as Microsoft.UI.Xaml.Window;
         if (nativeWindow == null) return;
 
-        //var iconPath = Path.Combine(AppContext.BaseDirectory, "Images/appicon.ico");
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "appicon.ico");
+        _windowHandle = WindowNative.GetWindowHandle(nativeWindow);
+        _logger = MauiProgram.Services?.GetService<AppLogService>();
 
-        // --- The Definitive Solution: Use MAUI Controls ---
-
-        // 1. Create a .NET MAUI MenuFlyout.
-        var flyout = new Microsoft.Maui.Controls.MenuFlyout();
-
-        // 2. Create MAUI MenuFlyoutItems and assign their Clicked event.
-        var openItem = new Microsoft.Maui.Controls.MenuFlyoutItem { Text = "Open" };
-        openItem.Clicked += (s, e) => ShowWindow();
-        flyout.Add(openItem);
-
-        var panicItem = new Microsoft.Maui.Controls.MenuFlyoutItem { Text = "Panic" };
-        panicItem.Clicked += (s, e) => PanicAndExit();
-        flyout.Add(panicItem);
-
-        flyout.Add(new Microsoft.Maui.Controls.MenuFlyoutSeparator());
-
-        var exitItem = new Microsoft.Maui.Controls.MenuFlyoutItem { Text = "Exit" };
-        exitItem.Clicked += (s, e) => ExitApplication();
-        flyout.Add(exitItem);
-
-        // 3. Initialize the tray icon.
-        trayIcon = new TaskbarIcon
+        try
         {
-            ToolTipText = "AnonWallClient",
-            Icon = new System.Drawing.Icon(iconPath),
-        };
+            var iconPath = Path.Combine(AppContext.BaseDirectory, "appicon.ico");
+            SetupSystemTray(iconPath);
 
-        // 4. Attach the MAUI flyout using the standard MAUI attached property.
-        FlyoutBase.SetContextFlyout(trayIcon, flyout);
+            var windowId = Win32Interop.GetWindowIdFromWindow(_windowHandle);
+            var appWindow = AppWindow.GetFromWindowId(windowId);
+            
+            // Subclass the window to intercept messages
+            WindowSubclasser.Subclass(_windowHandle, WndProc);
 
-        // 5. Assign a command for a standard left-click action.
-        trayIcon.LeftClickCommand = new Microsoft.Maui.Controls.Command(ShowWindow);
-
-        trayIcon.ForceCreate();
-
-        var windowHandle = WindowNative.GetWindowHandle(nativeWindow);
-        var windowId = Win32Interop.GetWindowIdFromWindow(windowHandle);
-        var appWindow = AppWindow.GetFromWindowId(windowId);
-
-        appWindow.Closing += (sender, e) =>
+            appWindow.Closing += (sender, e) =>
+            {
+                e.Cancel = true;
+                MinimizeToTray(sender);
+            };
+        }
+        catch (Exception ex)
         {
-            e.Cancel = true;
-            sender.Hide();
-        };
+            _logger?.Add($"Error in OnLaunched: {ex.Message}");
+        }
+    }
+
+    private void SetupSystemTray(string iconPath)
+    {
+        try
+        {
+            _icon = new Icon(iconPath);
+            _hIcon = _icon.Handle;
+            _trayMenu = CreatePopupMenu();
+            
+            AppendMenu(_trayMenu, 0, (uint)_trayMenuOpenId, "Open");
+            AppendMenu(_trayMenu, 0, (uint)_trayMenuPanicId, "Panic");
+            AppendMenu(_trayMenu, 0x800, 0, ""); // Separator
+            AppendMenu(_trayMenu, 0, (uint)_trayMenuExitId, "Exit");
+
+            var data = new NOTIFYICONDATA
+            {
+                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
+                hWnd = _windowHandle,
+                uID = 1,
+                uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP,
+                uCallbackMessage = WM_TRAYICON,
+                hIcon = _hIcon,
+                szTip = "AnonWallClient"
+            };
+            Shell_NotifyIcon(NIM_ADD, ref data);
+        }
+        catch (Exception ex)
+        {
+            _logger?.Add($"Error in SetupSystemTray: {ex.Message}");
+        }
+    }
+
+    private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        if (msg == WM_TRAYICON)
+        {
+            int eventType = lParam.ToInt32();
+            if (eventType == WM_RBUTTONUP)
+            {
+                SetForegroundWindow(hWnd);
+                POINT pt;
+                GetCursorPos(out pt);
+                int selected = TrackPopupMenu(_trayMenu, 0x0100, pt.X, pt.Y, 0, hWnd, IntPtr.Zero);
+                
+                if (selected == _trayMenuOpenId)
+                {
+                    ShowWindow();
+                    _isMinimizedToTray = false;
+                }
+                else if (selected == _trayMenuPanicId)
+                {
+                    PanicAndExit();
+                }
+                else if (selected == _trayMenuExitId)
+                {
+                    ExitApplication();
+                }
+            }
+            else if (eventType == WM_LBUTTONUP)
+            {
+                ShowWindow();
+                _isMinimizedToTray = false;
+            }
+        }
+        return WindowSubclasser.CallOriginalWndProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void MinimizeToTray(AppWindow sender)
+    {
+        _isMinimizedToTray = true;
+        sender.Hide();
     }
 
     private void ShowWindow()
@@ -88,28 +244,105 @@ public partial class App : MauiWinUIApplication
             var windowId = Win32Interop.GetWindowIdFromWindow(windowHandle);
             var appWindow = AppWindow.GetFromWindowId(windowId);
             appWindow.Show();
+            nativeWindow.Activate();
         }
     }
 
-    private void PanicAndExit()
+    private async void PanicAndExit()
     {
-        var panicPath = Preferences.Get("panic_file_path", string.Empty);
-        if (string.IsNullOrEmpty(panicPath))
+        try
         {
-            panicPath = Preferences.Get("panic_url", string.Empty);
-        }
+            // Get panic settings from SettingsService first, fallback to Preferences
+            string? panicPath = null;
+            
+            if (MauiProgram.Services is not null)
+            {
+                var settingsService = MauiProgram.Services.GetService<SettingsService>();
+                if (settingsService != null)
+                {
+                    panicPath = settingsService.GetPanicFilePath();
+                    if (string.IsNullOrEmpty(panicPath))
+                        panicPath = settingsService.GetPanicUrl();
+                }
+            }
+            
+            // Fallback to Preferences if SettingsService is not available
+            if (string.IsNullOrEmpty(panicPath))
+            {
+                panicPath = Preferences.Get("panic_file_path", string.Empty);
+                if (string.IsNullOrEmpty(panicPath))
+                    panicPath = Preferences.Get("panic_url", string.Empty);
+            }
 
-        if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
-        {
-            var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
-            _ = wallpaperService?.SetWallpaperAsync(panicPath);
+            if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
+            {
+                var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
+                if (wallpaperService != null)
+                {
+                    // Wait for wallpaper to be set before exiting
+                    await wallpaperService.SetWallpaperAsync(panicPath);
+                }
+            }
         }
+        catch (Exception ex)
+        {
+            _logger?.Add($"Panic action failed: {ex.Message}");
+        }
+        
         ExitApplication();
     }
 
     private void ExitApplication()
     {
-        trayIcon?.Dispose();
-        global::AnonWallClient.App.Current?.Quit();
+        try
+        {
+            // Clean up resources
+            _icon?.Dispose();
+            if (_hIcon != IntPtr.Zero)
+            {
+                DestroyIcon(_hIcon);
+                _hIcon = IntPtr.Zero;
+            }
+
+            // Remove tray icon
+            var data = new NOTIFYICONDATA
+            {
+                cbSize = Marshal.SizeOf(typeof(NOTIFYICONDATA)),
+                hWnd = _windowHandle,
+                uID = 1
+            };
+            Shell_NotifyIcon(NIM_DELETE, ref data);
+        }
+        finally
+        {
+            global::AnonWallClient.App.Current?.Quit();
+        }
+    }
+}
+
+internal static class WindowSubclasser
+{
+    private static IntPtr _originalWndProc;
+    private static WndProcDelegate? _newWndProc;
+
+    public delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, WndProcDelegate newProc);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    private const int GWLP_WNDPROC = -4;
+
+    public static void Subclass(IntPtr hWnd, WndProcDelegate newProc)
+    {
+        _newWndProc = newProc;
+        _originalWndProc = SetWindowLongPtr(hWnd, GWLP_WNDPROC, newProc);
+    }
+
+    public static IntPtr CallOriginalWndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        return CallWindowProc(_originalWndProc, hWnd, msg, wParam, lParam);
     }
 }

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AnonWallClient.Views.HistoryPage"
+             Title="Wallpaper History">
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header with Reset Button -->
+        <Grid Grid.Row="0" Padding="20,10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Label Grid.Column="0" Text="Wallpaper History" FontSize="18" FontAttributes="Bold" VerticalOptions="Center" />
+            <Button Grid.Column="1" Text="Reset History" BackgroundColor="DarkRed" TextColor="White" Clicked="OnResetHistoryClicked" />
+        </Grid>
+        
+        <!-- History List -->
+        <CollectionView x:Name="HistoryCollectionView" Grid.Row="1" ItemsSource="{Binding Wallpapers}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Style="{StaticResource HistoryItemFrameStyle}">
+                        <!-- Responsive Grid Layout -->
+                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="15" RowSpacing="8">
+                            
+                            <!-- Image with consistent sizing and tap gesture -->
+                            <Frame Grid.Column="0" Grid.RowSpan="3" 
+                                   Style="{StaticResource HistoryItemImageFrameStyle}"
+                                   VerticalOptions="Start">
+                                <Grid>
+                                    <Image Source="{Binding ThumbnailUrl}" 
+                                           Aspect="AspectFill">
+                                        <Image.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnImageTapped" CommandParameter="{Binding .}" />
+                                        </Image.GestureRecognizers>
+                                    </Image>
+                                    <!-- Small overlay icon to indicate the image is clickable -->
+                                    <Label Text="🔍" 
+                                           FontSize="12"
+                                           TextColor="White"
+                                           BackgroundColor="#80000000"
+                                           WidthRequest="20"
+                                           HeightRequest="20"
+                                           HorizontalTextAlignment="Center"
+                                           VerticalTextAlignment="Center"
+                                           HorizontalOptions="End"
+                                           VerticalOptions="Start"
+                                           Margin="2" />
+                                </Grid>
+                                <!-- Add visual indicator that image is clickable -->
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnImageTapped" CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+                            </Frame>
+                            
+                            <!-- Description with proper text wrapping -->
+                            <Label Grid.Column="1" Grid.Row="0"
+                                   Text="{Binding Description}" 
+                                   Style="{StaticResource HistoryItemDescriptionStyle}" />
+                            
+                            <!-- Time info and additional details -->
+                            <StackLayout Grid.Column="1" Grid.Row="1" Spacing="2">
+                                <Label Text="{Binding SetTime, StringFormat='Set: {0:g}'}" 
+                                       Style="{StaticResource HistoryItemTimeStyle}" />
+                                <Label Text="{Binding Uploader, StringFormat='By: {0}'}" 
+                                       FontSize="11" 
+                                       TextColor="Gray" />
+                            </StackLayout>
+                            
+                            <!-- Action buttons -->
+                            <StackLayout Grid.Column="1" Grid.Row="2" Orientation="Horizontal" Spacing="10">
+                                <Button Text="Save" 
+                                        Style="{StaticResource HistoryItemSaveButtonStyle}"
+                                        CommandParameter="{Binding .}" 
+                                        Clicked="OnSaveClicked" />
+                                <Button Text="View Full" 
+                                        FontSize="12"
+                                        Padding="15,8"
+                                        CornerRadius="5"
+                                        BackgroundColor="{AppThemeBinding Light=#28A745, Dark=#20C997}"
+                                        TextColor="White"
+                                        CommandParameter="{Binding .}" 
+                                        Clicked="OnViewFullClicked"
+                                        HorizontalOptions="Start"
+                                        VerticalOptions="End"
+                                        MinimumWidthRequest="80" />
+                            </StackLayout>
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            
+            <!-- Empty view for when no history exists -->
+            <CollectionView.EmptyView>
+                <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20" Margin="40">
+                    <Label x:Name="EmptyStateIcon" Text="📱" FontSize="48" HorizontalOptions="Center" />
+                    <Label x:Name="EmptyStateTitle" Text="No wallpaper history yet" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center" />
+                    <Label x:Name="EmptyStateMessage" Text="Wallpapers you've set will appear here" 
+                           FontSize="14" 
+                           TextColor="Gray"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,0,0,20" />
+                    <Button x:Name="EmptyStateButton" Text="Go to Settings" 
+                            Clicked="OnGoToSettingsClicked"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="8"
+                            Padding="20,10"
+                            HorizontalOptions="Center" />
+                </StackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </Grid>
+</ContentPage>

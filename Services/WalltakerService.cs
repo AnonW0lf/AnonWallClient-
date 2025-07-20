@@ -6,9 +6,10 @@ using AnonWallClient.Models;
 
 namespace AnonWallClient.Services;
 
-public class WalltakerService(IHttpClientFactory httpClientFactory)
+public class WalltakerService(IHttpClientFactory httpClientFactory, WallpaperHistoryService historyService)
 {
     private string? _lastImageUrl = null;
+    private readonly WallpaperHistoryService _historyService = historyService;
 
     public async Task<string?> GetNewWallpaperUrlAsync(string linkId)
     {
@@ -25,10 +26,20 @@ public class WalltakerService(IHttpClientFactory httpClientFactory)
             var response = await httpClient.GetFromJsonAsync<LinkData>(url);
             var newImageUrl = response?.PostUrl;
 
-            if (!string.IsNullOrEmpty(newImageUrl) && newImageUrl != _lastImageUrl)
+            if (!string.IsNullOrEmpty(newImageUrl))
             {
-                _lastImageUrl = newImageUrl;
-                return newImageUrl;
+                // Initialize _lastImageUrl from history if not set (app startup)
+                if (_lastImageUrl == null && _historyService.History.Any())
+                {
+                    _lastImageUrl = _historyService.History.First().ImageUrl;
+                }
+
+                // Check if this is truly a new wallpaper
+                if (newImageUrl != _lastImageUrl)
+                {
+                    _lastImageUrl = newImageUrl;
+                    return newImageUrl;
+                }
             }
         }
         catch (Exception ex)
@@ -39,7 +50,7 @@ public class WalltakerService(IHttpClientFactory httpClientFactory)
         return null;
     }
 
-    public async Task<(bool Success, string ErrorMessage)> PostResponseAsync(string linkId, string apiKey, string responseType)
+    public async Task<(bool Success, string ErrorMessage)> PostResponseAsync(string linkId, string apiKey, string responseType, string? responseText = null)
     {
         if (string.IsNullOrWhiteSpace(linkId) || string.IsNullOrWhiteSpace(apiKey))
         {
@@ -52,7 +63,8 @@ public class WalltakerService(IHttpClientFactory httpClientFactory)
         var payload = new ResponseData
         {
             ApiKey = apiKey,
-            ResponseType = responseType
+            ResponseType = responseType,
+            Text = responseText
         };
 
         var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");

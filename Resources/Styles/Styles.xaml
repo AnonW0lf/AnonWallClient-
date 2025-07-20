@@ -51,4 +51,48 @@
         <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TertiaryTextColor}" />
     </Style>
 
+    <!-- History Page Responsive Styles -->
+    <Style x:Key="HistoryItemFrameStyle" TargetType="Frame">
+        <Setter Property="Margin" Value="10,5" />
+        <Setter Property="Padding" Value="15" />
+        <Setter Property="HasShadow" Value="True" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BackgroundColor" Value="{StaticResource CardBackgroundColor}" />
+    </Style>
+
+    <Style x:Key="HistoryItemImageFrameStyle" TargetType="Frame">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HasShadow" Value="False" />
+        <Setter Property="BackgroundColor" Value="LightGray" />
+        <Setter Property="WidthRequest" Value="60" />
+        <Setter Property="HeightRequest" Value="60" />
+        <Setter Property="BorderColor" Value="Transparent" />
+    </Style>
+
+    <Style x:Key="HistoryItemDescriptionStyle" TargetType="Label">
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineBreakMode" Value="WordWrap" />
+        <Setter Property="VerticalOptions" Value="Start" />
+        <Setter Property="TextColor" Value="{StaticResource PrimaryTextColor}" />
+    </Style>
+
+    <Style x:Key="HistoryItemTimeStyle" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource TertiaryTextColor}" />
+        <Setter Property="VerticalOptions" Value="Start" />
+    </Style>
+
+    <Style x:Key="HistoryItemSaveButtonStyle" TargetType="Button">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="15,8" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#007ACC, Dark=#1BA1E2}" />
+        <Setter Property="TextColor" Value="White" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="VerticalOptions" Value="End" />
+        <Setter Property="MinimumWidthRequest" Value="80" />
+    </Style>
+
 </ResourceDictionary>

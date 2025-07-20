@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.OS;
+using Android.Util;
 using System.Diagnostics.CodeAnalysis;
 
 namespace AnonWallClient.Platforms.Android.Background;
@@ -19,11 +20,29 @@ public class BootReceiver : BroadcastReceiver
     {
         if (context != null && intent?.Action == Intent.ActionBootCompleted)
         {
-            var serviceIntent = new Intent(context, typeof(AndroidForegroundService));
-
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            try
             {
-                context.StartForegroundService(serviceIntent);
+                // Check if user has enabled auto-start after boot
+                // Only start service if user has configured the app with valid settings
+                var linkId = Preferences.Get("LinkId", string.Empty);
+                if (!string.IsNullOrEmpty(linkId))
+                {
+                    var serviceIntent = new Intent(context, typeof(AndroidForegroundService));
+
+                    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+                    {
+                        context.StartForegroundService(serviceIntent);
+                    }
+                    else
+                    {
+                        context.StartService(serviceIntent);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't crash
+                Log.Error("AnonWallClient", $"BootReceiver error: {ex.Message}");
             }
         }
     }

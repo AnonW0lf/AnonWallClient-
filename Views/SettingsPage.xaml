@@ -10,6 +10,30 @@
             <Entry x:Name="LinkIdEntry" Placeholder="Walltaker Link ID" />
             <Entry x:Name="ApiKeyEntry" Placeholder="Walltaker API Key" />
 
+            <Label Text="Polling Options" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                <Label Grid.Column="0" Text="Polling Interval (seconds):" VerticalOptions="Center"/>
+                <Entry Grid.Column="1" x:Name="PollingIntervalEntry" Keyboard="Numeric" Text="15"/>
+            </Grid>
+            <StackLayout Orientation="Horizontal" Spacing="10">
+                <CheckBox x:Name="WifiOnlyCheckBox" />
+                <Label Text="Poll only on Wi-Fi" VerticalOptions="Center"/>
+            </StackLayout>
+
+            <Label Text="History Settings" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Label Text="Maximum number of wallpapers to keep in history (0 = disabled):" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+            <Grid ColumnDefinitions="Auto, *" ColumnSpacing="10">
+                <Label Grid.Column="0" Text="Max History Limit:" VerticalOptions="Center"/>
+                <Entry Grid.Column="1" x:Name="MaxHistoryEntry" Keyboard="Numeric" Text="20" Placeholder="0 = disabled, default = 20"/>
+            </Grid>
+
+            <Label Text="Wallpaper Save Location" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Label Text="Folder where wallpapers from history will be saved:" FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
+            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="0,10,0,0">
+                <Label x:Name="SaveFolderLabel" Text="Default folder will be used" VerticalOptions="Center" FontSize="12" />
+                <Button Grid.Column="1" Text="Change Folder" Clicked="OnSelectSaveFolderClicked" />
+            </Grid>
+
             <Label Text="Panic Wallpaper" FontSize="18" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Label Text="Set a safe wallpaper to use with the 'Panic' button in the notification." FontSize="12" TextColor="{StaticResource SecondaryTextColor}" />
             
@@ -20,6 +44,13 @@
             <Entry x:Name="PanicUrlEntry" Placeholder="Or enter fallback URL" />
             
             <Button Text="Save Settings" Clicked="OnSaveClicked" Margin="0,30,0,0"/>
+
+            <Label Text="Data Management" FontSize="18" FontAttributes="Bold" Margin="0,30,0,0"/>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button Grid.Column="0" Text="Export Data" Clicked="OnExportDataClicked" />
+                <Button Grid.Column="1" Text="Import Data" Clicked="OnImportDataClicked" />
+            </Grid>
+            <Button Text="Open Data Folder" Clicked="OnOpenDataFolderClicked" Margin="0,10,0,0"/>
 
         </VerticalStackLayout>
     </ScrollView>

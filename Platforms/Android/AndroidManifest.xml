@@ -1,11 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.anonw0lf.AnonWalltakerClient">
 	<application android:allowBackup="true" android:icon="@mipmap/applogo" android:supportsRtl="true" android:label="Anon WallTaker Client">
-		<receiver android:name=".Platforms.Android.Background.BootReceiver" android:exported="true">
-			<intent-filter>
-				<action android:name="android.intent.action.BOOT_COMPLETED" />
-			</intent-filter>
-		</receiver>
 	</application>
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />

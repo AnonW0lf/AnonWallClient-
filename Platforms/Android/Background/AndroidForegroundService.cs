@@ -70,23 +70,51 @@ internal class AndroidForegroundService : Service
         return StartCommandResult.Sticky;
     }
 
-    private void HandleAction(string action)
+    private async void HandleAction(string action)
     {
         if (action == PanicAction)
         {
-            var panicFilePath = Preferences.Get("panic_file_path", string.Empty);
-            if (string.IsNullOrEmpty(panicFilePath))
+            try
             {
-                panicFilePath = Preferences.Get("panic_url", string.Empty);
-            }
+                // Get panic settings from SettingsService first, fallback to Preferences
+                string? panicPath = null;
 
-            if (!string.IsNullOrEmpty(panicFilePath) && MauiProgram.Services is not null)
+                if (MauiProgram.Services is not null)
+                {
+                    var settingsService = MauiProgram.Services.GetService<SettingsService>();
+                    if (settingsService != null)
+                    {
+                        panicPath = settingsService.GetPanicFilePath();
+                        if (string.IsNullOrEmpty(panicPath))
+                            panicPath = settingsService.GetPanicUrl();
+                    }
+                }
+
+                // Fallback to Preferences if SettingsService is not available
+                if (string.IsNullOrEmpty(panicPath))
+                {
+                    panicPath = Preferences.Get("panic_file_path", string.Empty);
+                    if (string.IsNullOrEmpty(panicPath))
+                        panicPath = Preferences.Get("panic_url", string.Empty);
+                }
+
+                if (!string.IsNullOrEmpty(panicPath) && MauiProgram.Services is not null)
+                {
+                    var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
+                    if (wallpaperService != null)
+                    {
+                        // Wait for wallpaper to be set before stopping service
+                        await wallpaperService.SetWallpaperAsync(panicPath);
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                var wallpaperService = MauiProgram.Services.GetService<IWallpaperService>();
-                _ = wallpaperService?.SetWallpaperAsync(panicFilePath);
+                Log.Error("AnonWallClient", $"Panic action failed: {ex.Message}");
             }
         }
 
+        // Stop the service after handling the action
         _cts.Cancel();
         StopForeground(true);
         StopSelf();

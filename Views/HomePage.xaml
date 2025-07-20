@@ -6,12 +6,37 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="10">
 
+            <!-- Current Wallpaper Info -->
+            <Frame Margin="0,0,0,10" Padding="10" HasShadow="True" BackgroundColor="Transparent">
+                <StackLayout Orientation="Horizontal" Spacing="10">
+                    <Image x:Name="CurrentWallpaperImage" WidthRequest="80" HeightRequest="80" BackgroundColor="Transparent" />
+                    <StackLayout>
+                        <Label x:Name="CurrentWallpaperDescription" FontAttributes="Bold" />
+                        <Label x:Name="CurrentWallpaperSetTime" FontSize="12" />
+                    </StackLayout>
+                </StackLayout>
+            </Frame>
+
             <Label Text="Respond to Current Wallpaper" FontSize="16" FontAttributes="Bold"/>
-            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-                <Button Grid.Column="0" Text="Horny" Clicked="OnHornyClicked" />
-                <Button Grid.Column="1" Text="Disgust" Clicked="OnDisgustClicked" />
-                <Button Grid.Column="2" Text="Came" Clicked="OnCameClicked" />
-            </Grid>
+            
+            <!-- Response Type Picker -->
+            <Label Text="Response Type:" FontSize="14" />
+            <Picker x:Name="ResponseTypePicker" Title="Select response type">
+                <Picker.ItemsSource>
+                    <x:Array Type="{x:Type x:String}">
+                        <x:String>🍆 Love it (horny)</x:String>
+                        <x:String>🤢 Hate it (disgust)</x:String>
+                        <x:String>💦 Came</x:String>
+                    </x:Array>
+                </Picker.ItemsSource>
+            </Picker>
+            
+            <!-- Response Text Entry -->
+            <Label Text="Optional Response Text:" FontSize="14" />
+            <Entry x:Name="ResponseTextEntry" Placeholder="Enter your response message (optional)" />
+            
+            <!-- Send Response Button -->
+            <Button Text="Send Response" Clicked="OnSendResponseClicked" Margin="0,10,0,0" />
 
             <Border StrokeThickness="1" Padding="5" Margin="0,10,0,0">
                 <Editor x:Name="LogEditor" IsReadOnly="True" />
@@ -19,7 +44,7 @@
 
             <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
 
-            <Label Text="Service Actions (for testing):" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
+            <Label Text="Service Actions:" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                 <Button Grid.Column="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
                 <Button Grid.Column="1" Text="Exit App" Clicked="OnExitClicked" />

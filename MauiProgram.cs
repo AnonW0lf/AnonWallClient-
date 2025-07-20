@@ -36,12 +36,15 @@ public static class MauiProgram
 
         builder.Services.AddHttpClient("WalltakerClient", client =>
         {
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("AnonWallClient/1.0");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("AnonWallClient/1.0.0-alpha.1");
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
 
         builder.Services.AddSingleton<AppLogService>();
         builder.Services.AddSingleton<WalltakerService>();
         builder.Services.AddSingleton<PollingService>();
+        builder.Services.AddSingleton<SettingsService>();
+        builder.Services.AddSingleton<WallpaperHistoryService>();
 
 #if ANDROID
         builder.Services.AddSingleton<IForegroundServiceManager, ForegroundServiceManager>();
@@ -52,8 +55,9 @@ public static class MauiProgram
 #endif
 
         builder.Services.AddSingleton<AppShell>();
-        builder.Services.AddSingleton<HomePage>();
-        builder.Services.AddSingleton<SettingsPage>();
+        builder.Services.AddTransient<HomePage>();
+        builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<HistoryPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

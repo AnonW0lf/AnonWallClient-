@@ -9,4 +9,7 @@ public class ResponseData
 
     [JsonPropertyName("type")]
     public string ResponseType { get; set; } = string.Empty;
+
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
 }
