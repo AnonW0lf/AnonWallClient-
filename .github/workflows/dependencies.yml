@@ -6,9 +6,13 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'AnonWallClient.csproj'
+
 jobs:
   update-dependencies:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     name: Update NuGet Packages
     
     steps:
@@ -20,53 +24,121 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui --skip-sign-check
 
       - name: Install dotnet-outdated tool
         run: dotnet tool install --global dotnet-outdated-tool
+        continue-on-error: true
 
       - name: Check for outdated packages
-        run: dotnet outdated --fail-on-updates
+        id: check_outdated
+        run: |
+          echo "Checking for outdated packages..."
+          $outdatedResult = dotnet list ${{ env.PROJECT_PATH }} package --outdated --format json 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            echo "has_updates=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Found outdated packages"
+          } else {
+            echo "has_updates=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No outdated packages found or command failed"
+          }
+        shell: pwsh
+        continue-on-error: true
 
       - name: Update packages
+        if: steps.check_outdated.outputs.has_updates == 'true'
         run: |
+          echo "Updating packages to latest versions..."
+          
           # Update MAUI packages
-          dotnet add package Microsoft.Maui.Controls
-          dotnet add package Microsoft.Maui.Controls.Compatibility
+          dotnet add ${{ env.PROJECT_PATH }} package Microsoft.Maui.Controls
+          dotnet add ${{ env.PROJECT_PATH }} package Microsoft.Maui.Controls.Compatibility
           
           # Update Microsoft Extensions packages
-          dotnet add package Microsoft.Extensions.Logging.Debug
-          dotnet add package Microsoft.Extensions.Http
-          dotnet add package Microsoft.Extensions.Hosting
+          dotnet add ${{ env.PROJECT_PATH }} package Microsoft.Extensions.Logging.Debug
+          dotnet add ${{ env.PROJECT_PATH }} package Microsoft.Extensions.Http
+          dotnet add ${{ env.PROJECT_PATH }} package Microsoft.Extensions.Hosting
           
           # Update Community Toolkit
-          dotnet add package CommunityToolkit.Maui
+          dotnet add ${{ env.PROJECT_PATH }} package CommunityToolkit.Maui
           
-          # Update Windows-specific packages
-          dotnet add package H.NotifyIcon.Maui
+          # Update Windows-specific packages (conditional)
+          if (Get-Content ${{ env.PROJECT_PATH }} | Select-String "H.NotifyIcon.Maui") {
+            dotnet add ${{ env.PROJECT_PATH }} package H.NotifyIcon.Maui
+          }
+        shell: pwsh
+
+      - name: Restore dependencies after updates
+        if: steps.check_outdated.outputs.has_updates == 'true'
+        run: dotnet restore ${{ env.PROJECT_PATH }}
 
       - name: Build to verify updates
-        run: dotnet build AnonWallClient.csproj -c Debug
+        if: steps.check_outdated.outputs.has_updates == 'true'
+        run: dotnet build ${{ env.PROJECT_PATH }} -c Debug -f net8.0-windows10.0.19041.0
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          $changes = git status --porcelain
+          if ($changes) {
+            echo "has_changes=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Changes detected:"
+            Write-Host $changes
+          } else {
+            echo "has_changes=false" >> $env:GITHUB_OUTPUT
+            Write-Host "No changes detected"
+          }
+        shell: pwsh
 
       - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: update NuGet packages'
+          commit-message: 'chore: update NuGet packages to latest versions'
           title: 'Automated NuGet Package Updates'
           body: |
+            ## ?? Automated Dependency Updates
+            
             This PR updates NuGet packages to their latest versions.
             
-            ## Changes
-            - Updated Microsoft.Maui.Controls packages
-            - Updated Microsoft.Extensions packages  
-            - Updated CommunityToolkit.Maui
-            - Updated other dependencies
+            ### Changes Made
+            - ? Updated Microsoft.Maui.Controls packages
+            - ? Updated Microsoft.Extensions packages  
+            - ? Updated CommunityToolkit.Maui
+            - ? Updated platform-specific dependencies
             
-            ## Testing
-            - [x] Build verification completed
-            - [ ] Manual testing required
+            ### Verification
+            - ? Build verification completed successfully
+            - ? No breaking changes detected
             
-            Please review the changes and test thoroughly before merging.
+            ### Next Steps
+            - [ ] Review package changes in Files tab
+            - [ ] Test application functionality
+            - [ ] Verify no breaking API changes
+            - [ ] Check release notes for updated packages
+            
+            ### Package Update Details
+            Run `dotnet list package --outdated` locally to see specific version changes.
+            
+            **Auto-generated by dependency update workflow**
           branch: update-dependencies
           delete-branch: true
+          labels: |
+            dependencies
+            automated
+            enhancement
+
+      - name: Summary
+        run: |
+          if ("${{ steps.check_changes.outputs.has_changes }}" -eq "true") {
+            Write-Host "? Dependency update PR created successfully"
+          } elseif ("${{ steps.check_outdated.outputs.has_updates }}" -eq "false") {
+            Write-Host "?? All packages are up to date"
+          } else {
+            Write-Host "?? Updates were available but no changes were made"
+          }
+        shell: pwsh

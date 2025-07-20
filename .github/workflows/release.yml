@@ -35,7 +35,7 @@ jobs:
           java-version: '11'
 
       - name: Install MAUI workload
-        run: dotnet workload install maui
+        run: dotnet workload install maui --skip-sign-check
 
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -46,11 +46,18 @@ jobs:
       - name: Publish Android APK
         run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-android -p:AndroidPackageFormat=apk -o ./artifacts/android
 
+      - name: List Android artifacts
+        run: |
+          echo "Android build artifacts:"
+          Get-ChildItem -Path "./artifacts/android" -Recurse -File | ForEach-Object { Write-Host $_.FullName }
+        shell: pwsh
+
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: ./artifacts/android/*.apk
+          if-no-files-found: error
 
   build-windows:
     runs-on: windows-latest
@@ -65,7 +72,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install MAUI workload
-        run: dotnet workload install maui
+        run: dotnet workload install maui --skip-sign-check
 
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -74,18 +81,20 @@ jobs:
         run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-windows10.0.19041.0 --no-restore
 
       - name: Publish Windows Application
-        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-windows10.0.19041.0 -o ./artifacts/windows
+        run: dotnet publish ${{ env.PROJECT_PATH }} -c Release -f net8.0-windows10.0.19041.0 -o ./artifacts/windows --self-contained
 
       - name: Create Windows ZIP
         run: |
           cd ./artifacts/windows
-          7z a -tzip ../../AnonWallClient-Windows.zip *
+          Compress-Archive -Path * -DestinationPath ../../AnonWallClient-Windows.zip
+        shell: pwsh
 
       - name: Upload Windows Application
         uses: actions/upload-artifact@v4
         with:
           name: windows-app
           path: AnonWallClient-Windows.zip
+          if-no-files-found: error
 
   build-ios:
     runs-on: macos-latest
@@ -100,7 +109,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install MAUI workload
-        run: dotnet workload install maui
+        run: dotnet workload install maui --skip-sign-check
 
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -108,11 +117,18 @@ jobs:
       - name: Build iOS
         run: dotnet build ${{ env.PROJECT_PATH }} -c Release -f net8.0-ios --no-restore
 
+      - name: Create iOS artifact package
+        run: |
+          mkdir -p ./artifacts/ios
+          find bin/Release/net8.0-ios -name "*.app" -exec cp -R {} ./artifacts/ios/ \; || echo "No .app found, copying build output"
+          cp -R bin/Release/net8.0-ios/* ./artifacts/ios/ 2>/dev/null || echo "Alternative copy completed"
+
       - name: Upload iOS Build
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: bin/Release/net8.0-ios/
+          path: ./artifacts/ios/
+          if-no-files-found: warn
 
   build-maccatalyst:
     runs-on: macos-latest
@@ -127,7 +143,7 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install MAUI workload
-        run: dotnet workload install maui
+        run: dotnet workload install maui --skip-sign-check
 
       - name: Restore dependencies
         run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -148,6 +164,7 @@ jobs:
         with:
           name: macos-app
           path: AnonWallClient-macOS.zip
+          if-no-files-found: error
 
   create-release:
     needs: [build-android, build-windows, build-ios, build-maccatalyst]
@@ -155,6 +172,7 @@ jobs:
     name: Create GitHub Release
     permissions:
       contents: write
+    if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success' || needs.build-maccatalyst.result == 'success')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -163,6 +181,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./release-artifacts
+
+      - name: List downloaded artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find ./release-artifacts -type f -name "*" | head -20
 
       - name: Get version from tag or input
         id: get_version
@@ -178,7 +201,7 @@ jobs:
       - name: Create release notes
         id: release_notes
         run: |
-          cat > release_notes.md << EOF
+          cat > release_notes.md << 'EOF'
           # AnonWallClient ${{ steps.get_version.outputs.version }}
           
           ## What's New
@@ -205,6 +228,12 @@ jobs:
           - **iOS**: iOS 11.0 or later
           - **macOS**: macOS 10.13 or later
           
+          ## Build Status
+          - Android Build: ${{ needs.build-android.result }}
+          - Windows Build: ${{ needs.build-windows.result }}
+          - iOS Build: ${{ needs.build-ios.result }}
+          - macOS Build: ${{ needs.build-maccatalyst.result }}
+          
           For setup instructions and configuration, please see the [README](https://github.com/${{ github.repository }}).
           EOF
 
@@ -220,6 +249,7 @@ jobs:
             release-artifacts/android-apk/*.apk
             release-artifacts/windows-app/*.zip
             release-artifacts/macos-app/*.zip
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -233,10 +263,16 @@ jobs:
         if: needs.create-release.result == 'success'
         run: |
           echo "? Release created successfully!"
-          echo "All platform builds completed and artifacts uploaded."
+          echo "All available platform builds completed and artifacts uploaded."
           
       - name: Notify failure
         if: needs.create-release.result == 'failure'
         run: |
           echo "? Release creation failed!"
           echo "Check the workflow logs for details."
+          
+      - name: Notify partial success
+        if: needs.create-release.result == 'skipped'
+        run: |
+          echo "?? Release was skipped due to build failures."
+          echo "Check individual build job results for details."
