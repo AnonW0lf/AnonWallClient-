@@ -40,7 +40,15 @@ public class WallpaperService : IWallpaperService
         _logger.Add($"Android Service: SetWallpaperAsync called for {wallpaperType}.");
         try
         {
-            var wallpaperManager = WallpaperManager.GetInstance(global::Android.App.Application.Context);
+            // Add null checks for Android context
+            var context = global::Android.App.Application.Context;
+            if (context == null)
+            {
+                _logger.Add("Android Service ERROR: Application context is null.");
+                return false;
+            }
+
+            var wallpaperManager = WallpaperManager.GetInstance(context);
             if (wallpaperManager == null)
             {
                 _logger.Add("Android Service ERROR: WallpaperManager instance is null.");
@@ -57,7 +65,14 @@ public class WallpaperService : IWallpaperService
                 _logger.Add("Android Service: Path is a URL, checking cache...");
                 
                 // Try to get from cache first
-                localPath = await _cacheService.GetCachedImagePathAsync(imagePathOrUrl);
+                try
+                {
+                    localPath = await _cacheService.GetCachedImagePathAsync(imagePathOrUrl);
+                }
+                catch (Exception cacheEx)
+                {
+                    _logger.Add($"Android Service: Cache error: {cacheEx.Message}");
+                }
                 
                 if (localPath != null)
                 {
@@ -76,8 +91,15 @@ public class WallpaperService : IWallpaperService
 
                     var imageData = await response.Content.ReadAsByteArrayAsync();
                     
-                    // Cache the image for future use
-                    localPath = await _cacheService.CacheImageAsync(imagePathOrUrl, imageData);
+                    // Cache the image for future use (with error handling)
+                    try
+                    {
+                        localPath = await _cacheService.CacheImageAsync(imagePathOrUrl, imageData);
+                    }
+                    catch (Exception cacheEx)
+                    {
+                        _logger.Add($"Android Service: Failed to cache image: {cacheEx.Message}");
+                    }
                     
                     imageStream = new MemoryStream(imageData);
                 }
@@ -85,6 +107,11 @@ public class WallpaperService : IWallpaperService
             else
             {
                 _logger.Add("Android Service: Path is a local file, opening stream...");
+                if (!File.Exists(imagePathOrUrl))
+                {
+                    _logger.Add($"Android Service ERROR: Local file does not exist: {imagePathOrUrl}");
+                    return false;
+                }
                 imageStream = new FileStream(imagePathOrUrl, FileMode.Open, FileAccess.Read);
                 localPath = imagePathOrUrl;
             }
@@ -97,8 +124,17 @@ public class WallpaperService : IWallpaperService
             {
                 _logger.Add($"Android Service: Bitmap decoded successfully. Size: {originalBitmap.Width}x{originalBitmap.Height}");
                 
-                // Apply fit mode if needed
-                var processedBitmap = ApplyFitMode(originalBitmap, fitMode);
+                // Apply fit mode if needed (with error handling)
+                Bitmap processedBitmap;
+                try
+                {
+                    processedBitmap = ApplyFitMode(originalBitmap, fitMode);
+                }
+                catch (Exception fitEx)
+                {
+                    _logger.Add($"Android Service: Error applying fit mode, using original: {fitEx.Message}");
+                    processedBitmap = originalBitmap;
+                }
                 
                 _logger.Add($"Android Service: Calling native SetBitmap for {wallpaperType}...");
                 
@@ -108,14 +144,36 @@ public class WallpaperService : IWallpaperService
                 // Clean up processed bitmap if different from original
                 if (processedBitmap != originalBitmap)
                 {
-                    processedBitmap?.Dispose();
+                    try
+                    {
+                        processedBitmap?.Dispose();
+                    }
+                    catch (Exception disposeEx)
+                    {
+                        _logger.Add($"Android Service: Error disposing bitmap: {disposeEx.Message}");
+                    }
                 }
 
                 if (success)
                 {
                     _logger.Add($"Android Service: Native SetBitmap call completed for {wallpaperType}.");
-                    await MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"New {wallpaperType.ToString().ToLower()} set!", ToastDuration.Short).Show());
-                    await AddToHistory(imagePathOrUrl, wallpaperType);
+                    try
+                    {
+                        await MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"New {wallpaperType.ToString().ToLower()} set!", ToastDuration.Short).Show());
+                    }
+                    catch (Exception toastEx)
+                    {
+                        _logger.Add($"Android Service: Toast error: {toastEx.Message}");
+                    }
+                    
+                    try
+                    {
+                        await AddToHistory(imagePathOrUrl, wallpaperType);
+                    }
+                    catch (Exception historyEx)
+                    {
+                        _logger.Add($"Android Service: History error: {historyEx.Message}");
+                    }
                     return true;
                 }
                 else
@@ -133,6 +191,10 @@ public class WallpaperService : IWallpaperService
         catch (Exception ex)
         {
             _logger.Add($"Android Service FATAL ERROR: {ex.GetType().Name} - {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                _logger.Add($"Android Service INNER EXCEPTION: {ex.InnerException.Message}");
+            }
             return false;
         }
     }

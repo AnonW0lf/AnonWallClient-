@@ -55,24 +55,116 @@
             <!-- Send Response Button -->
             <Button Text="Send Response" Clicked="OnSendResponseClicked" Margin="0,10,0,0" />
 
-            <Border StrokeThickness="1" Padding="5" Margin="0,10,0,0">
-                <Editor x:Name="LogEditor" IsReadOnly="True" />
+            <!-- Status Notes Section replacing log editor -->
+            <Label Text="Status Notes" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
+            
+            <!-- Enhanced Status Dashboard Section -->
+            <Label Text="System Status" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
+            
+            <!-- Service Status Grid -->
+            <Frame BackgroundColor="Transparent" HasShadow="True" Padding="15" Margin="0,5,0,10">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
+                    
+                    <!-- Polling Status -->
+                    <Ellipse x:Name="PollingStatusIndicator" 
+                             Grid.Column="0" Grid.Row="0"
+                             Fill="Red" 
+                             WidthRequest="12" 
+                             HeightRequest="12" 
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1" Grid.Row="0" Text="Polling:" FontAttributes="Bold" VerticalOptions="Center" FontSize="13" />
+                    <Label x:Name="PollingStatusLabel" Grid.Column="2" Grid.Row="0" Text="Stopped" VerticalOptions="Center" FontSize="13" />
+                    <Button x:Name="StopPollingButton" 
+                            Grid.Column="3" Grid.Row="0" 
+                            Text="Stop" 
+                            FontSize="11" 
+                            Padding="8,4" 
+                            BackgroundColor="DarkRed" 
+                            TextColor="White"
+                            Clicked="OnStopPollingClicked"
+                            IsVisible="False" />
+                    <Button x:Name="StartPollingButton" 
+                            Grid.Column="3" Grid.Row="0" 
+                            Text="Start" 
+                            FontSize="11" 
+                            Padding="8,4" 
+                            BackgroundColor="DarkGreen" 
+                            TextColor="White"
+                            Clicked="OnStartPollingClicked"
+                            IsVisible="False" />
+                    
+                    <!-- Network Status -->
+                    <Ellipse x:Name="NetworkStatusIndicator" 
+                             Grid.Column="0" Grid.Row="1"
+                             Fill="Gray" 
+                             WidthRequest="12" 
+                             HeightRequest="12" 
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1" Grid.Row="1" Text="Network:" FontAttributes="Bold" VerticalOptions="Center" FontSize="13" />
+                    <Label x:Name="NetworkStatusLabel" Grid.Column="2" Grid.Row="1" Text="Checking..." VerticalOptions="Center" FontSize="13" />
+                    
+                    <!-- Cache Status -->
+                    <Ellipse x:Name="CacheStatusIndicator" 
+                             Grid.Column="0" Grid.Row="2"
+                             Fill="Gray" 
+                             WidthRequest="12" 
+                             HeightRequest="12" 
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1" Grid.Row="2" Text="Cache:" FontAttributes="Bold" VerticalOptions="Center" FontSize="13" />
+                    <Label x:Name="CacheStatusLabel" Grid.Column="2" Grid.Row="2" Text="Unknown" VerticalOptions="Center" FontSize="13" />
+                    
+                    <!-- AutoStart Status -->
+                    <Ellipse x:Name="AutoStartStatusIndicator" 
+                             Grid.Column="0" Grid.Row="3"
+                             Fill="Gray" 
+                             WidthRequest="12" 
+                             HeightRequest="12" 
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1" Grid.Row="3" Text="AutoStart:" FontAttributes="Bold" VerticalOptions="Center" FontSize="13" />
+                    <Label x:Name="AutoStartStatusLabel" Grid.Column="2" Grid.Row="3" Text="Unknown" VerticalOptions="Center" FontSize="13" />
+                    
+                    <!-- Configuration Status -->
+                    <Ellipse x:Name="ConfigStatusIndicator" 
+                             Grid.Column="0" Grid.Row="4"
+                             Fill="Gray" 
+                             WidthRequest="12" 
+                             HeightRequest="12" 
+                             VerticalOptions="Center" />
+                    <Label Grid.Column="1" Grid.Row="4" Text="Config:" FontAttributes="Bold" VerticalOptions="Center" FontSize="13" />
+                    <Label x:Name="ConfigStatusLabel" Grid.Column="2" Grid.Row="4" Text="Unknown" VerticalOptions="Center" FontSize="13" />
+                </Grid>
+            </Frame>
+            
+            <!-- System Information -->
+            <Label Text="System Information:" FontAttributes="Bold" Margin="0,10,0,5" FontSize="14" />
+            <Frame BackgroundColor="Transparent" HasShadow="True" Padding="10" Margin="0,0,0,10">
+                <Label x:Name="SystemInfoLabel" Text="Loading system information..." FontSize="11" />
+            </Frame>
+            
+            <!-- Recent Activity -->
+            <Label Text="Recent Activity:" FontAttributes="Bold" Margin="0,10,0,5" FontSize="14" />
+            <Border StrokeThickness="1" Padding="10" Margin="0,0,0,10" HeightRequest="120">
+                <ScrollView x:Name="StatusScrollView">
+                    <Label x:Name="StatusNotesLabel" Text="No recent activity" FontSize="11" />
+                </ScrollView>
             </Border>
 
-            <Button Text="Copy Log" Clicked="OnCopyLogClicked" Margin="0,10,0,0"/>
-
-            <Label Text="Service Actions:" FontSize="16" FontAttributes="Bold" Margin="0,20,0,0"/>
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="10">
-                <Button Grid.Column="0" Grid.Row="0" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" />
-                <Button Grid.Column="1" Grid.Row="0" Text="Exit App" Clicked="OnExitClicked" />
+            <!-- Action Buttons -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" Margin="0,10,0,0">
+                <Button Text="Copy Status Notes" Clicked="OnCopyLogClicked" Grid.Column="0" Grid.Row="0" FontSize="12"/>
+                <Button Text="Refresh Status" Clicked="OnRefreshStatusClicked" Grid.Column="1" Grid.Row="0" FontSize="12"/>
+                
+                <Button Grid.Column="0" Grid.Row="1" Text="Panic" BackgroundColor="DarkRed" Clicked="OnPanicClicked" FontSize="12" />
+                <Button Grid.Column="1" Grid.Row="1" Text="Exit App" Clicked="OnExitClicked" FontSize="12" />
                 
                 <!-- Windows-specific restore button -->
                 <Button x:Name="RestoreButton" 
-                        Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                        Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"
                         Text="Restore Original Wallpapers" 
                         BackgroundColor="DarkBlue" 
                         Clicked="OnRestoreClicked"
-                        IsVisible="False" />
+                        IsVisible="False"
+                        FontSize="12" />
             </Grid>
 
         </VerticalStackLayout>

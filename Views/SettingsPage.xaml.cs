@@ -151,6 +151,9 @@ public partial class SettingsPage : ContentPage
             // Load wallpaper fit mode
             WallpaperFitModePicker.SelectedIndex = (int)_settingsService.GetWallpaperFitMode();
             
+            // Load lockscreen setting
+            EnableLockscreenCheckBox.IsChecked = _settingsService.GetEnableLockscreenWallpaper();
+            
             // Load caching settings
             EnableCacheCheckBox.IsChecked = _settingsService.GetEnableImageCache();
             MaxCacheSizeEntry.Text = _settingsService.GetMaxCacheSizeMB().ToString();
@@ -379,6 +382,9 @@ public partial class SettingsPage : ContentPage
                 newFitMode = (WallpaperFitMode)WallpaperFitModePicker.SelectedIndex;
                 _settingsService.SetWallpaperFitMode(newFitMode);
             }
+            
+            // Save lockscreen setting
+            _settingsService.SetEnableLockscreenWallpaper(EnableLockscreenCheckBox.IsChecked);
             
             // Save caching settings
             _settingsService.SetEnableImageCache(EnableCacheCheckBox.IsChecked);

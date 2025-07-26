@@ -54,6 +54,12 @@
                         <x:String>Stretch (same as fill)</x:String>
                     </Picker.Items>
                 </Picker>
+                
+                <StackLayout Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                    <CheckBox x:Name="EnableLockscreenCheckBox" />
+                    <Label Text="Enable lockscreen wallpaper changes" VerticalOptions="Center"/>
+                </StackLayout>
+                <Label Text="When disabled, only desktop wallpaper will be changed" FontSize="11" TextColor="{StaticResource SecondaryTextColor}" Margin="35,0,0,0" />
             </StackLayout>
 
             <!-- Image Caching -->

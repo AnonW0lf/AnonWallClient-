@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
@@ -28,6 +28,7 @@
     <Color x:Key="Gray400">#888888</Color>
     <Color x:Key="Gray500">#666666</Color>
     <Color x:Key="Gray600">#444444</Color>
+    <Color x:Key="Gray800">#333333</Color>
     <Color x:Key="Gray900">#222222</Color>
     <Color x:Key="Gray950">#111111</Color>
     

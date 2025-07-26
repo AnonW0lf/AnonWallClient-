@@ -2,20 +2,55 @@ using AnonWallClient.Services;
 
 namespace AnonWallClient.Background;
 
+public enum PollingStatus
+{
+    Stopped,
+    Running,
+    Error
+}
+
 public class PollingService(WalltakerService walltakerService, IWallpaperService wallpaperService, AppLogService logger, SettingsService settingsService)
 {
     private bool _isPollingEnabled = false;
+    private PollingStatus _currentStatus = PollingStatus.Stopped;
+    private string _lastError = string.Empty;
     private readonly SettingsService _settingsService = settingsService;
+
+    public PollingStatus CurrentStatus => _currentStatus;
+    public string LastError => _lastError;
+    public bool IsPollingEnabled => _isPollingEnabled;
+
+    public event EventHandler<PollingStatus>? StatusChanged;
+
+    private void SetStatus(PollingStatus status, string error = "")
+    {
+        if (_currentStatus != status)
+        {
+            _currentStatus = status;
+            _lastError = error;
+            StatusChanged?.Invoke(this, status);
+            
+            var statusText = status switch
+            {
+                PollingStatus.Running => "Running",
+                PollingStatus.Error => $"Error: {error}",
+                _ => "Stopped"
+            };
+            logger.Add($"Polling status changed to: {statusText}");
+        }
+    }
 
     public void EnablePolling()
     {
         _isPollingEnabled = true;
+        SetStatus(PollingStatus.Running);
         logger.Add("Polling has been enabled.");
     }
 
     public void DisablePolling()
     {
         _isPollingEnabled = false;
+        SetStatus(PollingStatus.Stopped);
         logger.Add("Polling has been disabled.");
     }
 
@@ -128,6 +163,13 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
                                     // Process each new wallpaper
                                     foreach (var (imageUrl, wallpaperType) in newWallpapers)
                                     {
+                                        // Check if lockscreen is enabled when processing lockscreen wallpapers
+                                        if (wallpaperType == WallpaperType.Lockscreen && !_settingsService.GetEnableLockscreenWallpaper())
+                                        {
+                                            logger.Add($"Skipping lockscreen wallpaper (lockscreen disabled): {imageUrl}");
+                                            continue;
+                                        }
+
                                         logger.Add($"Setting new {wallpaperType}: {imageUrl}");
                                         try
                                         {
@@ -155,6 +197,7 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
                             catch (Exception ex)
                             {
                                 logger.Add($"Error checking for new wallpapers: {ex.Message}");
+                                SetStatus(PollingStatus.Error, ex.Message);
                             }
                         }
                     }
@@ -175,6 +218,7 @@ public class PollingService(WalltakerService walltakerService, IWallpaperService
             catch (Exception ex)
             {
                 logger.Add($"Unexpected error in polling loop: {ex.Message}");
+                SetStatus(PollingStatus.Error, ex.Message);
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // Wait longer on error
             }
         }

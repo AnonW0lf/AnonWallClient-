@@ -65,20 +65,28 @@ public class PanicService
 
             try
             {
-                // Set lockscreen
-                _logger.Add("Panic service: Setting lockscreen...");
-                lockscreenSuccess = await _wallpaperService.SetWallpaperAsync(
-                    panicPath, 
-                    _settingsService.GetWallpaperFitMode(), 
-                    WallpaperType.Lockscreen);
-                
-                if (lockscreenSuccess)
+                // Set lockscreen only if enabled
+                if (_settingsService.GetEnableLockscreenWallpaper())
                 {
-                    _logger.Add("Panic service: Lockscreen set successfully.");
+                    _logger.Add("Panic service: Setting lockscreen...");
+                    lockscreenSuccess = await _wallpaperService.SetWallpaperAsync(
+                        panicPath, 
+                        _settingsService.GetWallpaperFitMode(), 
+                        WallpaperType.Lockscreen);
+                    
+                    if (lockscreenSuccess)
+                    {
+                        _logger.Add("Panic service: Lockscreen set successfully.");
+                    }
+                    else
+                    {
+                        _logger.Add("Panic service: Failed to set lockscreen.");
+                    }
                 }
                 else
                 {
-                    _logger.Add("Panic service: Failed to set lockscreen.");
+                    _logger.Add("Panic service: Skipping lockscreen (disabled in settings).");
+                    lockscreenSuccess = true; // Consider it successful since it was intentionally skipped
                 }
             }
             catch (Exception ex)

@@ -55,6 +55,9 @@ public class AppSettings
     public bool AutoStartEnabled { get; set; } = false;
     public int AutoStartIntervalHours { get; set; } = 1;
     
+    // Lockscreen settings
+    public bool EnableLockscreenWallpaper { get; set; } = true;
+    
     // Add more settings as needed
 }
 
@@ -67,62 +70,102 @@ public class SettingsService
 
     public SettingsService()
     {
-        _documentsPath = GetAppDataDirectory();
-        _settingsPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.settings.json");
-        _historyPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.wallpaper_history.json");
-        
-        // Ensure directories exist
         try
         {
-            var settingsDir = Path.GetDirectoryName(_settingsPath);
-            var historyDir = Path.GetDirectoryName(_historyPath);
+            _documentsPath = GetAppDataDirectory();
+            _settingsPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.settings.json");
+            _historyPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.wallpaper_history.json");
             
-            if (!string.IsNullOrEmpty(settingsDir))
+            // Ensure directories exist
+            try
             {
-                Directory.CreateDirectory(settingsDir);
+                var settingsDir = Path.GetDirectoryName(_settingsPath);
+                var historyDir = Path.GetDirectoryName(_historyPath);
+                
+                if (!string.IsNullOrEmpty(settingsDir))
+                {
+                    Directory.CreateDirectory(settingsDir);
+                }
+                if (!string.IsNullOrEmpty(historyDir))
+                {
+                    Directory.CreateDirectory(historyDir);
+                }
             }
-            if (!string.IsNullOrEmpty(historyDir))
+            catch (Exception ex)
             {
-                Directory.CreateDirectory(historyDir);
+                System.Diagnostics.Debug.WriteLine($"Error creating settings directories: {ex.Message}");
+                
+                // If external storage fails, try fallback to app directory
+#if ANDROID
+                try
+                {
+                    _documentsPath = FileSystem.AppDataDirectory;
+                    _settingsPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.settings.json");
+                    _historyPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.wallpaper_history.json");
+                    
+                    Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+                    Directory.CreateDirectory(Path.GetDirectoryName(_historyPath)!);
+                    
+                    System.Diagnostics.Debug.WriteLine($"Fallback to app directory: {_documentsPath}");
+                }
+                catch (Exception fallbackEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Fallback also failed: {fallbackEx.Message}");
+                    // Create minimal paths in memory for basic functionality
+                    _documentsPath = "/tmp";
+                    _settingsPath = "/tmp/settings.json";
+                    _historyPath = "/tmp/history.json";
+                }
+#endif
             }
+            
+            Load();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error creating settings directories: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Critical error in SettingsService constructor: {ex.Message}");
             
-            // If external storage fails, try fallback to app directory
-#if ANDROID
-            try
-            {
-                _documentsPath = FileSystem.AppDataDirectory;
-                _settingsPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.settings.json");
-                _historyPath = Path.Combine(_documentsPath, "settings", "AnonWallClient.wallpaper_history.json");
-                
-                Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
-                Directory.CreateDirectory(Path.GetDirectoryName(_historyPath)!);
-                
-                System.Diagnostics.Debug.WriteLine($"Fallback to app directory: {_documentsPath}");
-            }
-            catch (Exception fallbackEx)
-            {
-                System.Diagnostics.Debug.WriteLine($"Fallback also failed: {fallbackEx.Message}");
-            }
-#endif
+            // Initialize with safe defaults
+            _documentsPath = "/tmp";
+            _settingsPath = "/tmp/settings.json";
+            _historyPath = "/tmp/history.json";
+            _settings = new AppSettings();
         }
-        
-        Load();
     }
 
     private string GetAppDataDirectory()
     {
 #if ANDROID
-        // Use internal storage: /Internal storage/AnonClient/
-        var externalStorageDir = Android.OS.Environment.ExternalStorageDirectory?.AbsolutePath;
-        if (!string.IsNullOrEmpty(externalStorageDir))
+        try
         {
-            return Path.Combine(externalStorageDir, "AnonClient");
+            // Use internal storage: /Internal storage/AnonClient/
+            var externalStorageDir = Android.OS.Environment.ExternalStorageDirectory?.AbsolutePath;
+            if (!string.IsNullOrEmpty(externalStorageDir))
+            {
+                var anonClientDir = Path.Combine(externalStorageDir, "AnonClient");
+                
+                // Test if we can actually write to this directory
+                try
+                {
+                    Directory.CreateDirectory(anonClientDir);
+                    var testFile = Path.Combine(anonClientDir, "test_write.tmp");
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                    return anonClientDir;
+                }
+                catch
+                {
+                    // If we can't write to external storage, fall back to app directory
+                    return FileSystem.AppDataDirectory;
+                }
+            }
         }
-        // Fallback to app-specific external storage
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error accessing external storage: {ex.Message}");
+        }
+        
+        // Fallback to app-specific directory
         return FileSystem.AppDataDirectory;
 #else
         // Other platforms: Documents/AnonClient/
@@ -431,6 +474,10 @@ public class SettingsService
 
     public int GetAutoStartIntervalHours() => Math.Max(1, Math.Min(24, Settings.AutoStartIntervalHours)); // Between 1 and 24 hours
     public void SetAutoStartIntervalHours(int value) { Settings.AutoStartIntervalHours = Math.Max(1, Math.Min(24, value)); Save(); }
+
+    // Lockscreen settings methods
+    public bool GetEnableLockscreenWallpaper() => Settings.EnableLockscreenWallpaper;
+    public void SetEnableLockscreenWallpaper(bool value) { Settings.EnableLockscreenWallpaper = value; Save(); }
 
     // Helper method to get LinkId for specific wallpaper type
     public string GetLinkIdForType(WallpaperType wallpaperType)
